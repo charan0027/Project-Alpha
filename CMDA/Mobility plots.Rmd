@@ -1,6 +1,5 @@
 ---
 title: "Mobility charts"
-author: "Radhika Pande"
 date: "2025-01-13"
 output: 
   html_document:
@@ -1641,6 +1640,7 @@ ggplot(mode_heatmap_data %>%
     fill = "Percentage (%)",
     title = "Mode of Travel by Cluster Groups"
   )
+
 
 
 
