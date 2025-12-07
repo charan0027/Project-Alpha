@@ -1,6 +1,5 @@
 ---
 title: "HH_Commute and employment tiers"
-author: "Radhika Pande"
 date: "2025-01-09"
 output: 
   html_document:
@@ -825,3 +824,4 @@ kable(modes_wide,
     kable_styling()
 
 ```
+
