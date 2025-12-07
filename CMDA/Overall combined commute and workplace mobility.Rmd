@@ -1,6 +1,5 @@
 ---
 title: "Commute and workplace mobility overall"
-author: "Radhika Pande"
 date: "2025-01-10"
 output:   
   html_document :
@@ -359,4 +358,5 @@ commute_filtered %>%
   row_spec(0, bold = TRUE) %>%
   column_spec(2:3, width = "100px")
 ```
+
 
