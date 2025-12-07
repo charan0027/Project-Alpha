@@ -1,6 +1,5 @@
 ---
 title: "Mobility analysis (Workplace Survey)"
-author: "Radhika"
 date: "2024-12-05"
 output:   
   html_document :
@@ -2039,4 +2038,5 @@ data %>%
   row_spec(0, bold = TRUE) %>%
   column_spec(1, width = "300px") %>% # Make first column wider to accommodate long descriptions
   scroll_box(width = "100%")
+
 ```
