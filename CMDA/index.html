@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CMDA project | Your Name</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    /* Small tweaks specific to this page */
+    .hero-image {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .thumb-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+    .thumb-card img {
+      width: 100%;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+    .back-link {
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <main class="content">
+    <a href="../index.html#data-projects" class="back-link">&larr; Back to portfolio</a>
+
+    <section class="block">
+      <h2>CMDA project – Financial &amp; operational analysis</h2>
+      <p>
+        One‑paragraph summary: what problem CMDA faces, what data you used,
+        and what kind of decisions this work supports.
+      </p>
+      <p>
+        Mention tech stack briefly: e.g. R, RMarkdown, spatial data, dashboards, etc.
+      </p>
+
+      <!-- Hero image (optional) -->
+      <img src="images/fig1.png" alt="CMDA overview visualization" class="hero-image">
+    </section>
+
+    <section class="block">
+      <h3>Deliverables</h3>
+      <ul>
+        <li><strong>Technical report:</strong>
+          <a href="report.pdf" target="_blank">Download PDF</a>
+        </li>
+        <li><strong>Exploratory analysis notebook:</strong>
+          <a href="analysis1.html" target="_blank">Interactive HTML (RMarkdown)</a>
+        </li>
+        <li><strong>Scenario / optimisation notebook:</strong>
+          <a href="analysis2.html" target="_blank">Interactive HTML</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="block">
+      <h3>Key visuals</h3>
+      <p>
+        A visual gallery helps reviewers quickly see maps, charts, and dashboards.
+      </p>
+      <div class="thumb-grid">
+        <div class="thumb-card">
+          <img src="images/fig2.png" alt="Revenue vs expenditure by zone">
+          <p>Revenue vs expenditure by zone.</p>
+        </div>
+        <div class="thumb-card">
+          <img src="images/fig3.png" alt="Operational KPIs dashboard">
+          <p>Operational KPIs dashboard for priority wards.</p>
+        </div>
+        <div class="thumb-card">
+          <img src="images/fig4.png" alt="Scenario comparison map">
+          <p>Scenario comparison map for proposed interventions.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3>Summary of insights</h3>
+      <ul>
+        <li>1–2 bullet points on what CMDA can do differently based on your analysis.</li>
+        <li>1 bullet highlighting any modelling / optimisation or forecasting you did.</li>
+        <li>1 bullet about impact: how this was or can be used in decision‑making.</li>
+      </ul>
+    </section>
+
+    <footer class="footer">
+      <p>&copy; 2025 Your Name</p>
+    </footer>
+  </main>
+</body>
+</html>
