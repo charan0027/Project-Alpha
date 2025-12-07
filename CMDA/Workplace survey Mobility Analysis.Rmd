@@ -1,0 +1,2042 @@
+---
+title: "Mobility analysis (Workplace Survey)"
+author: "Radhika"
+date: "2024-12-05"
+output:   
+  html_document :
+    code_folding: hide
+---
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+#Mobility analysis for workplace survey
+
+```{r data, include=FALSE}
+library(readxl)
+library(knitr)
+library(rmarkdown)
+library(dplyr)
+library(googledrive)
+library(tidyverse)
+library(openxlsx) 
+library(sf)
+library(stringr)
+library(survey)
+library(srvyr)
+library(knitr)
+library(kableExtra)
+library(htmltools)
+library(haven)
+data<-read.csv("D://cmda_final//workplace//Data//Workplace_Survey_Cleaned_for_NotApplicable.csv")
+
+```
+
+Commute patterns and mobility analysis using variables of number of locations, number of commute days, travel cost, distance,mode of travel, subsidies etc.
+
+1.  Number of locations the respondent has to commute to every day
+```{r numberoflocations}
+comm_commute_location<-data %>%
+  mutate(work_comm_commute_location= case_when(
+    comm_commute_location == -9998 ~ "Do not know",
+    comm_commute_location == -9999 ~ "Do not want to disclose",
+    comm_commute_location == 1 ~ "Yes, one fixed workplace location",
+    comm_commute_location == 2 ~ "Fixed, but multiple locations",
+    comm_commute_location == 3 ~ "No fixed location, it varies every day ",
+    TRUE ~ NA
+  )) %>%
+  group_by(work_comm_commute_location)%>%
+  summarise(Freq=n())%>%
+  ungroup()%>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_comm_commute_location, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Yes, one fixed workplace location",
+   "Fixed, but multiple locations",
+   "No fixed location, it varies every day "
+  )))
+# Create the kable table with formatting
+comm_commute_location%>%
+  kbl(col.names = c("Number of locations", "Freq", "Share (%)"),
+      caption = "Number of locations the respondent has to commute to every day",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Number of commute locations traveled by gender
+```{r numberofcommutelocations_gender}
+#by gender
+commute_location_gender <- data %>% 
+  filter(!perinf_gender %in% c(-9999, -9998, -9997),
+         !is.na(comm_commute_location)) %>%
+  mutate(
+    work_comm_commute_location = case_when(
+      comm_commute_location == -9998 ~ "Do not know",
+      comm_commute_location == -9999 ~ "Do not want to disclose",
+      comm_commute_location == 1 ~ "Yes, one fixed workplace location",
+      comm_commute_location == 2 ~ "Fixed, but multiple locations",
+      comm_commute_location == 3 ~ "No fixed location, it varies every day",
+      TRUE ~ NA_character_
+    ),
+    perinf_gender = case_when(
+      perinf_gender == 1 ~ "Male",
+      perinf_gender == 2 ~ "Female",
+      TRUE ~ NA_character_
+    )
+  ) %>% 
+  group_by(perinf_gender, work_comm_commute_location) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_commute_location, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Yes, one fixed workplace location",
+    "Fixed, but multiple locations",
+    "No fixed location, it varies every day"
+  )))
+
+# Create the formatted kable table
+commute_location_gender %>%
+  kbl(col.names = c("Number of Locations", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Work Location Types",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Number of commute locations by industry types
+```{r commuteindustrytypes}
+data %>%
+  mutate(
+    work_comm_commute_location = case_when(
+      comm_commute_location == -9998 ~ "Do not know",
+      comm_commute_location == -9999 ~ "Do not want to disclose",
+      comm_commute_location == 1 ~ "Yes, one fixed workplace location",
+      comm_commute_location == 2 ~ "Fixed, but multiple locations",
+      comm_commute_location == 3 ~ "No fixed location, it varies every day",
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(work_comm_commute_location),
+    !is.na(industry)
+  ) %>%
+  group_by(work_comm_commute_location, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>% 
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_comm_commute_location,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_commute_location, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Yes, one fixed workplace location",
+    "Fixed, but multiple locations",
+    "No fixed location, it varies every day"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Commute Location by Industry Types (%)",  # Updated caption to reflect column percentages
+    align = rep('r', 17),
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+
+2.  Number of commute days
+```{r numberofcommutedays}
+
+#Number of commute days
+# Create the summary table
+commute_days_summary <- data %>%
+  mutate(work_commute_days = case_when(
+    comm_commute_days == -9998 ~ "Do not know",
+    comm_commute_days == -9999 ~ "Do not want to disclose",
+    comm_commute_days == 1 ~ "My workplace is at/I work from home",
+    comm_commute_days == 2 ~ "<2 days",
+    comm_commute_days == 3 ~ "2-3 days",
+    comm_commute_days == 4 ~ "4-6 days",
+    comm_commute_days == 5 ~ "7 days",
+    TRUE ~ NA
+  )) %>%
+  group_by(work_commute_days) %>%
+  summarise(Freq = n()) %>%
+  ungroup()%>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_commute_days, c(
+    "Do not know",
+    "Do not want to disclose",
+    "My workplace is at/I work from home",
+    "<2 days",
+    "2-3 days",
+    "4-6 days",
+    "7 days"
+  )))
+
+# Create the kable table with formatting
+commute_days_summary %>%
+  kbl(col.names = c("Number of commute days", "Freq", "Share (%)"),
+      caption = "Distribution of Commute Days",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+
+```
+
+Number of commute days classification by gender
+```{r numberofcommutedaysgender}
+commute_days_gender <- data %>% 
+  filter(!perinf_gender %in% c(-9999, -9998, -9997),
+         !is.na(comm_commute_days)) %>%
+  mutate(
+    work_commute_days = case_when(
+      comm_commute_days == -9998 ~ "Do not know",
+      comm_commute_days == -9999 ~ "Do not want to disclose",
+      comm_commute_days == 1 ~ "My workplace is at/I work from home",
+      comm_commute_days == 2 ~ "<2 days",
+      comm_commute_days == 3 ~ "2-3 days",
+      comm_commute_days == 4 ~ "4-6 days",
+      comm_commute_days == 5 ~ "7 days",
+      TRUE ~ NA_character_
+    ),
+    perinf_gender = case_when(
+      perinf_gender == 1 ~ "Male",
+      perinf_gender == 2 ~ "Female",
+      TRUE ~ NA_character_
+    )
+  ) %>% 
+  group_by(perinf_gender, work_commute_days) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_commute_days, c(
+    "Do not know",
+    "Do not want to disclose",
+    "My workplace is at/I work from home",
+    "<2 days",
+    "2-3 days",
+    "4-6 days",
+    "7 days"
+  )))
+
+# Create the formatted kable table
+commute_days_gender %>%
+  kbl(col.names = c("Number of commute days", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Commute Days",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Number of commute days by industry types
+```{r commutedayindustry}
+data %>%
+  mutate(
+    work_commute_days = case_when(
+      comm_commute_days == -9998 ~ "Do not know",
+      comm_commute_days == -9999 ~ "Do not want to disclose",
+      comm_commute_days == 1 ~ "My workplace is at/I work from home",
+      comm_commute_days == 2 ~ "<2 days",
+      comm_commute_days == 3 ~ "2-3 days",
+      comm_commute_days == 4 ~ "4-6 days",
+      comm_commute_days == 5 ~ "7 days",
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(work_commute_days),
+    !is.na(industry)
+  ) %>%
+  group_by(work_commute_days, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_commute_days,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_commute_days, c(
+    "Do not know",
+    "Do not want to disclose",
+    "My workplace is at/I work from home",
+    "<2 days",
+    "2-3 days",
+    "4-6 days",
+    "7 days"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Commute days by industry types (%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+
+3.  Overall commute patterns and distances:
+```{r overallcombinedcommute}
+commute_filtered <- data %>%
+  mutate(
+    commute_distance = case_when(
+      # Work from home category
+      comm_commute_days == 1 ~ "Work from home",
+      
+      # Fixed workplace location with distances
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & comm_work_dist == 6 ~ "Fixed location: 50 to 100 km",
+      comm_commute_location == 1 & comm_work_dist == 7 ~ "Fixed location: More than 100 km",
+      
+      # Multiple fixed locations with distances
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 6 ~ "Multiple locations: 50 to 100 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 7 ~ "Multiple locations: More than 100 km",
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      
+      # Don't know and don't want to disclose responses
+      comm_commute_location == -9998 | comm_work_dist == -9998 | comm_work_dist_mult == -9998 ~ "Do not know",
+      comm_commute_location == -9999 | comm_work_dist == -9999 | comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+      
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(commute_distance)) %>%
+  group_by(commute_distance) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(commute_distance, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km",
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed location: 50 to 100 km",
+    "Fixed location: More than 100 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple locations: 50 to 100 km",
+    "Multiple locations: More than 100 km",
+    "No fixed location, varies daily"
+  )))
+
+# Create the formatted kable table
+commute_filtered %>%
+  kbl(col.names = c("Commute Pattern", "Frequency", "Share (%)"),
+      caption = "Distribution of Commute Patterns and Distances",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Overall commute distance by gender
+```{r overallcommutegender}
+overall_combined_gender<-data %>%
+  filter(!perinf_gender %in% c (-9999,-9998,-9997))%>% 
+  mutate( commute_distance = case_when(
+      # Work from home category
+      comm_commute_days == 1 ~ "Work from home",
+      
+      # Fixed workplace location with distances
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & comm_work_dist == 6 ~ "Fixed location: 50 to 100 km",
+      comm_commute_location == 1 & comm_work_dist == 7 ~ "Fixed location: More than 100 km",
+      
+      # Multiple fixed locations with distances
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 6 ~ "Multiple locations: 50 to 100 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 7 ~ "Multiple locations: More than 100 km",
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      
+      # Don't know and don't want to disclose responses
+      comm_commute_location == -9998 | comm_work_dist == -9998 | comm_work_dist_mult == -9998 ~ "Do not know",
+      comm_commute_location == -9999 | comm_work_dist == -9999 | comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+      
+      TRUE ~ NA_character_
+    )
+  ) %>%
+    filter(!is.na(commute_distance))%>%
+  group_by(perinf_gender, commute_distance) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_distance, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km",
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed location: 50 to 100 km",
+    "Fixed location: More than 100 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple locations: 50 to 100 km",
+    "Multiple locations: More than 100 km",
+    "No fixed location, varies daily"
+  )))
+# Create the formatted kable table
+overall_combined_gender %>%
+  kbl(col.names = c("Distance to work", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Overall Commute Distances",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+
+```
+
+Overall commute distance by industry types
+```{r overallcommuteindustry}
+data %>%
+  mutate(
+    commute_distance= case_when( # Work from home category
+      comm_commute_days == 1 ~ "Work from home",
+      
+      # Fixed workplace location with distances
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & comm_work_dist == 6 ~ "Fixed location: 50 to 100 km",
+      comm_commute_location == 1 & comm_work_dist == 7 ~ "Fixed location: More than 100 km",
+      
+      # Multiple fixed locations with distances
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 6 ~ "Multiple locations: 50 to 100 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 7 ~ "Multiple locations: More than 100 km",
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      
+      # Don't know and don't want to disclose responses
+      comm_commute_location == -9998 | comm_work_dist == -9998 | comm_work_dist_mult == -9998 ~ "Do not know",
+      comm_commute_location == -9999 | comm_work_dist == -9999 | comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+      
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%filter(
+    !is.na(commute_distance),
+    !is.na(industry)
+  ) %>%
+  group_by(commute_distance, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = commute_distance,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_distance, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km",
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed location: 50 to 100 km",
+    "Fixed location: More than 100 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple locations: 50 to 100 km",
+    "Multiple locations: More than 100 km",
+    "No fixed location, varies daily")))%>%
+  kbl(
+    caption = "Distribution of  Commute Distance by Industry Types(%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+
+```
+
+4. Travel distance to fixed workplace
+```{r travelfixed}
+commute_work_distance <- data %>%
+  mutate(work_commute_dist = case_when(
+    comm_work_dist == -9998 ~ "Do not know",
+    comm_work_dist == -9999 ~ "Do not want to disclose",
+    comm_work_dist == 1 ~ "Less than 5 km",
+    comm_work_dist == 2 ~ "5 to 10 km",
+    comm_work_dist == 3 ~ "10-15 km",
+    comm_work_dist == 4 ~ "15 to 20 km",
+    comm_work_dist == 5 ~ " 20 to 50 km",
+    comm_work_dist == 6 ~ "50 to 100 km",
+    comm_work_dist == 7 ~ "More than 100 km",
+    TRUE ~ NA
+  )) %>% 
+  filter(!is.na(work_commute_dist)) %>% 
+  group_by(work_commute_dist) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_commute_dist, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 5 km",
+    "5 to 10 km",
+    "10-15 km",
+    "15 to 20 km",
+    "20 to 50 km",
+    "50 to 100 km",
+    "More than 100 km"
+  )))
+# Create the formatted kable table
+commute_work_distance %>%
+  kbl(col.names = c("Distance to work", "Freq", "Share"),
+      caption = "Travel distance from residence to workplace",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+
+```
+
+Travel distances in case of fixed workplace by gender
+```{r traveldistancefixedgender}
+#By gender
+commute_work_distance_gender <- data %>% 
+  filter(!perinf_gender %in% c(-9999, -9998, -9997),
+         !is.na(comm_work_dist)) %>%
+  mutate(
+    work_commute_dist = case_when(
+      comm_work_dist == -9998 ~ "Do not know",
+      comm_work_dist == -9999 ~ "Do not want to disclose",
+      comm_work_dist == 1 ~ "Less than 5 km",
+      comm_work_dist == 2 ~ "5 to 10 km",
+      comm_work_dist == 3 ~ "10-15 km",
+      comm_work_dist == 4 ~ "15 to 20 km",
+      comm_work_dist == 5 ~ "20 to 50 km",
+      comm_work_dist == 6 ~ "50 to 100 km",
+      comm_work_dist == 7 ~ "More than 100 km",
+      TRUE ~ NA_character_
+    ),
+    perinf_gender = case_when(
+      perinf_gender == 1 ~ "Male",
+      perinf_gender == 2 ~ "Female",
+      TRUE ~ NA_character_
+    )
+  ) %>% 
+  filter(!is.na(work_commute_dist)) %>% 
+  group_by(perinf_gender, work_commute_dist) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_commute_dist, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 5 km",
+    "5 to 10 km",
+    "10-15 km",
+    "15 to 20 km",
+    "20 to 50 km",
+    "50 to 100 km",
+    "More than 100 km"
+  )))
+
+# Create the formatted kable table
+commute_work_distance_gender %>%
+  kbl(col.names = c("Distance to work", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Distance to Fixed Work Location",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Travel distance in case of fixed workplace by industry types
+```{r traveldistancefixedindustry}
+data %>%
+   mutate(commute_distance = case_when(
+    comm_work_dist == -9998 ~ "Do not know",
+    comm_work_dist == -9999 ~ "Do not want to disclose",
+    comm_work_dist == 1 ~ "Less than 5 km",
+    comm_work_dist == 2 ~ "5 to 10 km",
+    comm_work_dist == 3 ~ "10-15 km",
+    comm_work_dist == 4 ~ "15 to 20 km",
+    comm_work_dist == 5 ~ " 20 to 50 km",
+    comm_work_dist == 6 ~ "50 to 100 km",
+    comm_work_dist == 7 ~ "More than 100 km",
+    TRUE ~ NA
+  ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(commute_distance),
+    !is.na(industry)
+  ) %>%
+  group_by(commute_distance, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = commute_distance,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_distance, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 5 km",
+    "5 to 10 km",
+    "10-15 km",
+    "15 to 20 km",
+    "20 to 50 km",
+    "50 to 100 km",
+    "More than 100 km"
+  )))%>%
+  kbl(
+    caption = "Distribution of Travel Distance to Fixed Workplace by Industry Types (%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+  
+```
+
+5. Total distance traveled for work (multiple work locations)
+```{r mwltotaldistancetraveled}
+comm_work_dist_mult<-data %>%
+  mutate(work_commute_dist_mult = case_when(
+    comm_work_dist_mult == -9998 ~ "Do not know",
+    comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+    comm_work_dist_mult == 1 ~ "Less than 5 km",
+    comm_work_dist_mult == 2 ~ "5 to 10 km",
+    comm_work_dist_mult == 3 ~ "10-15 km",
+    comm_work_dist_mult == 4 ~ "15 to 20 km",
+    comm_work_dist_mult == 5 ~ " 20 to 50 km",
+    comm_work_dist_mult == 6 ~ "50 to 100 km",
+    comm_work_dist_mult == 7 ~ "More than 100 km",
+  TRUE ~ NA
+)) %>% 
+  filter(!is.na(work_commute_dist_mult)) %>% 
+  group_by(work_commute_dist_mult) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_commute_dist_mult, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 5 km",
+    "5 to 10 km",
+    "10-15 km",
+    "15 to 20 km",
+    "20 to 50 km",
+    "50 to 100 km",
+    "More than 100 km"
+  )))
+#create a formatted table
+comm_work_dist_mult %>%
+  kbl(col.names = c("Total distance", "Freq", "Share"),
+      caption = "Total distance for travelling to work (multiple work locations)",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Total distance traveled to mwl by gender
+```{r totaldistancemwlgender}
+#by gender
+comm_work_dist_mult_gender <- data %>%
+  filter(!perinf_gender %in% c(-9999, -9998, -9997),
+         !is.na(comm_work_dist_mult)) %>% 
+  mutate(
+    work_dist_mult_gender = case_when(
+      comm_work_dist_mult == -9998 ~ "Do not know",
+      comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+      comm_work_dist_mult == 1 ~ "Less than 5 km",
+      comm_work_dist_mult == 2 ~ "5 to 10 km",
+      comm_work_dist_mult == 3 ~ "10-15 km",
+      comm_work_dist_mult == 4 ~ "15 to 20 km",
+      comm_work_dist_mult == 5 ~ "20 to 50 km",
+      comm_work_dist_mult == 6 ~ "50 to 100 km",
+      comm_work_dist_mult == 7 ~ "More than 100 km",
+      TRUE ~ NA_character_
+    ),
+    perinf_gender = case_when(
+      perinf_gender == 1 ~ "Male",
+      perinf_gender == 2 ~ "Female",
+      TRUE ~ NA_character_
+    )
+  ) %>% 
+  filter(!is.na(work_dist_mult_gender)) %>% 
+  group_by(perinf_gender, work_dist_mult_gender) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_dist_mult_gender, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 5 km",
+    "5 to 10 km",
+    "10-15 km",
+    "15 to 20 km",
+    "20 to 50 km",
+    "50 to 100 km",
+    "More than 100 km"
+  )))
+
+# Create the formatted kable table
+comm_work_dist_mult_gender %>%
+  kbl(col.names = c("Total distance", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Total Commute Distance (Multiple Work Locations)",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Total distance traveled for work (multiple work locations) by industry types
+```{r distancetravelledmwl}
+data %>%
+  mutate(
+    work_commute_dist_mult = case_when(
+      comm_work_dist_mult == -9998 ~ "Do not know",
+      comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+      comm_work_dist_mult == 1 ~ "Less than 5 km",
+      comm_work_dist_mult == 2 ~ "5 to 10 km",
+      comm_work_dist_mult == 3 ~ "10-15 km",
+      comm_work_dist_mult == 4 ~ "15 to 20 km",
+      comm_work_dist_mult == 5 ~ "20 to 50 km",
+      comm_work_dist_mult == 6 ~ "50 to 100 km",
+      comm_work_dist_mult == 7 ~ "More than 100 km",
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(work_commute_dist_mult),
+    !is.na(industry)
+  ) %>%
+  group_by(work_commute_dist_mult, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_commute_dist_mult,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_commute_dist_mult, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 5 km",
+    "5 to 10 km",
+    "10-15 km",
+    "15 to 20 km",
+    "20 to 50 km",
+    "50 to 100 km",
+    "More than 100 km"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Commute Distance by Industry Types(%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+
+```
+
+6.  Time taken for one-way commute
+```{r timeforowcommute}
+#Time taken for one-way commute
+commute_ow_time <- data %>%
+  mutate(work_commute_owtime = case_when(
+    comm_ow_time == -9998 ~ "Do not know",
+    comm_ow_time == -9999 ~ "Do not want to disclose",
+    comm_ow_time == 1 ~ "Less than 15 mins",
+    comm_ow_time == 2 ~ "15 to 30 mins",
+    comm_ow_time == 3 ~ "30 to 45 mins",
+    comm_ow_time == 4 ~ "45 mins to 1 hour",
+    comm_ow_time == 5 ~ " 1 to 2 hours",
+    comm_ow_time == 6 ~ "More than 2 hours",
+    TRUE ~ NA
+  )) %>% 
+  filter(!is.na(work_commute_owtime)) %>% 
+  group_by(work_commute_owtime) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_commute_owtime, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 15 mins",
+    "15 to 30 mins",
+    "30 to 45 mins",
+    "45 mins to 1 hour",
+    "1 to 2 hours",
+    "More than 2 hours"
+  )))
+# Create the formatted kable table
+commute_ow_time %>%
+  kbl(col.names = c("Time Taken", "Freq", "Share"),
+      caption = "Time taken for one-way commute",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Time taken for one-way commute by gender
+```{r owcommutegender}
+#by gender
+commute_ow_time_gender <- data %>%
+  filter(!perinf_gender %in% c(-9999, -9998, -9997),
+         !is.na(comm_ow_time)) %>% 
+  mutate(
+    work_commute_owtime_gender = case_when(
+      comm_ow_time == -9998 ~ "Do not know",
+      comm_ow_time == -9999 ~ "Do not want to disclose",
+      comm_ow_time == 1 ~ "Less than 15 mins",
+      comm_ow_time == 2 ~ "15 to 30 mins",
+      comm_ow_time == 3 ~ "30 to 45 mins",
+      comm_ow_time == 4 ~ "45 mins to 1 hour",
+      comm_ow_time == 5 ~ "1 to 2 hours",
+      comm_ow_time == 6 ~ "More than 2 hours",
+      TRUE ~ NA_character_
+    ),
+    perinf_gender = case_when(
+      perinf_gender == 1 ~ "Male",
+      perinf_gender == 2 ~ "Female",
+      TRUE ~ NA_character_
+    )
+  ) %>% 
+  filter(!is.na(work_commute_owtime_gender)) %>% 
+  group_by(perinf_gender, work_commute_owtime_gender) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_commute_owtime_gender, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 15 mins",
+    "15 to 30 mins",
+    "30 to 45 mins",
+    "45 mins to 1 hour",
+    "1 to 2 hours",
+    "More than 2 hours"
+  )))
+
+# Create the formatted kable table
+commute_ow_time_gender %>%
+  kbl(col.names = c("One-way commute time", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of One-way Commute Times",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Time taken for one-way commute by industry types
+```{r timeowindustry}
+data %>%
+  mutate(
+    work_commute_owtime = case_when(
+      comm_ow_time == -9998 ~ "Do not know",
+      comm_ow_time == -9999 ~ "Do not want to disclose",
+      comm_ow_time == 1 ~ "Less than 15 mins",
+      comm_ow_time == 2 ~ "15 to 30 mins",
+      comm_ow_time == 3 ~ "30 to 45 mins",
+      comm_ow_time == 4 ~ "45 mins to 1 hour",
+      comm_ow_time == 5 ~ "1 to 2 hours",
+      comm_ow_time == 6 ~ "More than 2 hours",
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(work_commute_owtime),
+    !is.na(industry)
+  ) %>%
+  group_by(work_commute_owtime, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_commute_owtime,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_commute_owtime, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 15 mins",
+    "15 to 30 mins",
+    "30 to 45 mins",
+    "45 mins to 1 hour",
+    "1 to 2 hours",
+    "More than 2 hours"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Commute Time by Industry Types(%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+
+7.Total time spent travelling for work (Multiple Work Locations)
+```{r mwltotaltimespent}
+comm_time_mult<-data %>%
+  mutate(work_commute_time_mult = case_when(
+    comm_time_mult == -9998 ~ "Do not know",
+    comm_time_mult == -9999 ~ "Do not want to disclose",
+    comm_time_mult == 1 ~ "Less than 15 mins",
+    comm_time_mult == 2 ~ "15 to 30 mins",
+    comm_time_mult == 3 ~ "30 to 45 mins",
+    comm_time_mult == 4 ~ "45 mins to 1 hour",
+    comm_time_mult == 5 ~ " 1 to 2 hours",
+    comm_time_mult == 6 ~ "More than 2 hours",
+    TRUE ~ NA
+  )) %>% 
+  filter(!is.na(work_commute_time_mult)) %>% 
+  group_by(work_commute_time_mult) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_commute_time_mult, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 15 mins",
+    "15 to 30 mins",
+    "30 to 45 mins",
+    "45 mins to 1 hour",
+    "1 to 2 hours",
+    "More than 2 hours"
+  )))
+# Create the formatted kable table
+comm_time_mult %>%
+  kbl(col.names = c("Time Taken", "Freq", "Share"),
+      caption = "Total time taken for travelling to work (multiple work locations)",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Total time taken traveling for work (multiple work locations) by gender
+```{r mwltotaltimetakengender}
+comm_time_mult_gender <- data %>%
+  filter(!perinf_gender %in% c(-9999, -9998, -9997),
+         !is.na(comm_time_mult)) %>% 
+  mutate(
+    work_time_mult_gender = case_when(
+      comm_time_mult == -9998 ~ "Do not know",
+      comm_time_mult == -9999 ~ "Do not want to disclose",
+      comm_time_mult == 1 ~ "Less than 15 mins",
+      comm_time_mult == 2 ~ "15 to 30 mins",
+      comm_time_mult == 3 ~ "30 to 45 mins",
+      comm_time_mult == 4 ~ "45 mins to 1 hour",
+      comm_time_mult == 5 ~ "1 to 2 hours",
+      comm_time_mult == 6 ~ "More than 2 hours",
+      TRUE ~ NA_character_
+    ),
+    perinf_gender = case_when(
+      perinf_gender == 1 ~ "Male",
+      perinf_gender == 2 ~ "Female",
+      TRUE ~ NA_character_
+    )
+  ) %>% 
+  filter(!is.na(work_time_mult_gender)) %>% 
+  group_by(perinf_gender, work_time_mult_gender) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_time_mult_gender, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 15 mins",
+    "15 to 30 mins",
+    "30 to 45 mins",
+    "45 mins to 1 hour",
+    "1 to 2 hours",
+    "More than 2 hours"
+  )))
+
+# Create the formatted kable table
+comm_time_mult_gender %>%
+  kbl(col.names = c("Total time", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Total Commute Time (Multiple Work Locations)",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Total time taken travel for multiple work locations by industry types
+``` {r totaltimetakenindustry}
+data %>%
+  mutate(
+    work_commute_time_mult = case_when(
+      comm_time_mult == -9998 ~ "Do not know",
+      comm_time_mult == -9999 ~ "Do not want to disclose",
+      comm_time_mult == 1 ~ "Less than 15 mins",
+      comm_time_mult == 2 ~ "15 to 30 mins",
+      comm_time_mult == 3 ~ "30 to 45 mins",
+      comm_time_mult == 4 ~ "45 mins to 1 hour",
+      comm_time_mult == 5 ~ "1 to 2 hours",
+      comm_time_mult == 6 ~ "More than 2 hours",
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(work_commute_time_mult),
+    !is.na(industry)
+  ) %>%
+  group_by(work_commute_time_mult, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_commute_time_mult,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_commute_time_mult, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Less than 15 mins",
+    "15 to 30 mins",
+    "30 to 45 mins",
+    "45 mins to 1 hour",
+    "1 to 2 hours",
+    "More than 2 hours"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Multiple Location Commute Time by Industry Types(%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+
+
+8.  Travel cost for commute
+```{r travelcostcommute}
+comm_travel_cost<-data %>%
+  mutate(work_comm_travel_cost=case_when(
+    comm_travel_cost == -9998 ~ "Do not know",
+    comm_travel_cost  == -9999 ~ "Do not want to disclose",
+    comm_travel_cost  == 1 ~ "No expenses (work from home/commute by walk/cycle)",
+    comm_travel_cost  == 2 ~ "INR 25 or less",
+    comm_travel_cost  == 3 ~ "INR 26-50",
+    comm_travel_cost  == 4 ~ "INR 51-100",
+    comm_travel_cost  == 5 ~ "INR 101-150",
+    comm_travel_cost  == 6 ~ "INR 151-300",
+    comm_travel_cost  == 7 ~ "INR 301-500",
+    comm_travel_cost  == 8 ~ "More than 500",
+    TRUE ~ NA
+  ))%>% 
+  filter(!is.na(work_comm_travel_cost)) %>% 
+  group_by(work_comm_travel_cost) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_comm_travel_cost, c(
+    "Do not know",
+    "Do not want to disclose",
+    "No expenses (work from home/commute by walk/cycle)",
+    "INR 25 or less",
+     "INR 26-50",
+    "INR 51-100",
+    "INR 101-150",
+   "INR 151-300",
+   "INR 301-500",
+    "More than 500"
+  )))
+# Create the formatted kable table
+comm_travel_cost %>%
+  kbl(col.names = c("Travel cost", "Freq", "Share"),
+      caption = "Money spent for work related trips in a particular day",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Travel cost by gender
+```{r travelcostgender}
+comm_travel_cost_gender <- data %>% 
+  filter(!perinf_gender %in% c(-9999, -9998, -9997),
+         !is.na(comm_travel_cost)) %>%
+  mutate(
+    work_comm_travel_cost = case_when(
+      comm_travel_cost == -9998 ~ "Do not know",
+      comm_travel_cost == -9999 ~ "Do not want to disclose",
+      comm_travel_cost == 1 ~ "No expenses (work from home/commute by walk/cycle)",
+      comm_travel_cost == 2 ~ "INR 25 or less",
+      comm_travel_cost == 3 ~ "INR 26-50",
+      comm_travel_cost == 4 ~ "INR 51-100",
+      comm_travel_cost == 5 ~ "INR 101-150",
+      comm_travel_cost == 6 ~ "INR 151-300",
+      comm_travel_cost == 7 ~ "INR 301-500",
+      comm_travel_cost == 8 ~ "More than 500",
+      TRUE ~ NA_character_
+    ),
+    perinf_gender = case_when(
+      perinf_gender == 1 ~ "Male",
+      perinf_gender == 2 ~ "Female",
+      TRUE ~ NA_character_
+    )
+  ) %>% 
+  filter(!is.na(work_comm_travel_cost)) %>% 
+  group_by(perinf_gender, work_comm_travel_cost) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_travel_cost, c(
+    "Do not know",
+    "Do not want to disclose",
+    "No expenses (work from home/commute by walk/cycle)",
+    "INR 25 or less",
+    "INR 26-50",
+    "INR 51-100",
+    "INR 101-150",
+    "INR 151-300",
+    "INR 301-500",
+    "More than 500"
+  )))
+
+# Create formatted table
+comm_travel_cost_gender %>%
+  kbl(col.names = c("Travel Cost", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Travel Costs",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Travel cost by industry type
+```{r travelcostindustry}
+data %>%
+  mutate(
+    work_comm_travel_cost = case_when(
+      comm_travel_cost == -9998 ~ "Do not know",
+      comm_travel_cost == -9999 ~ "Do not want to disclose",
+      comm_travel_cost == 1 ~ "No expenses (work from home/commute by walk/cycle)",
+      comm_travel_cost == 2 ~ "INR 25 or less",
+      comm_travel_cost == 3 ~ "INR 26-50",
+      comm_travel_cost == 4 ~ "INR 51-100",
+      comm_travel_cost == 5 ~ "INR 101-150",
+      comm_travel_cost == 6 ~ "INR 151-300",
+      comm_travel_cost == 7 ~ "INR 301-500",
+      comm_travel_cost == 8 ~ "More than 500",
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(work_comm_travel_cost),
+    !is.na(industry)
+  ) %>%
+  group_by(work_comm_travel_cost, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_comm_travel_cost,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_travel_cost, c(
+    "Do not know",
+    "Do not want to disclose",
+    "No expenses (work from home/commute by walk/cycle)",
+    "INR 25 or less",
+    "INR 26-50",
+    "INR 51-100",
+    "INR 101-150",
+    "INR 151-300",
+    "INR 301-500",
+    "More than 500"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Daily Travel Cost by Industry Types(%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+
+
+
+9. Mode of travel
+```{r modeoftravel}
+comm_mode_travel <- data %>%
+  mutate(work_comm_mode = case_when(
+    comm_mode_travel == -9998 ~ "Do not know",
+    comm_mode_travel == -9999 ~ "Do not want to disclose",
+    comm_mode_travel == 1 ~ "Walk",
+    comm_mode_travel == 2 ~ "Bicycle",
+    comm_mode_travel == 3 ~ "Car/Van (own)",
+    comm_mode_travel == 4 ~ "Car (Uber, Ola, Taxi etc)",
+    comm_mode_travel == 5 ~ "2-Wheeler: scooter, motorbike (own)",
+    comm_mode_travel == 6 ~ "2-Wheeler (Rapido, Ola, etc)",
+    comm_mode_travel == 7 ~ "Auto-rickshaw",
+    comm_mode_travel == 8 ~ "Employer-provided transportation",
+    comm_mode_travel == 9 ~ "MTC buses/city bus",
+    comm_mode_travel == 10 ~ "TNSTC (State transport buses)",
+    comm_mode_travel == 11 ~ "Chennai Suburban Rail",
+    comm_mode_travel == 12 ~ "MRTS",
+    comm_mode_travel == 13 ~ "Metro",
+    comm_mode_travel == 14 ~ "Shared auto/shared tempo",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(work_comm_mode)) %>%
+  group_by(work_comm_mode) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_comm_mode, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Walk",
+    "Bicycle",
+    "Car/Van (own)",
+    "Car (Uber, Ola, Taxi etc)",
+    "2-Wheeler: scooter, motorbike (own)",
+    "2-Wheeler (Rapido, Ola, etc)",
+    "Auto-rickshaw",
+    "Employer-provided transportation",
+    "MTC buses/city bus",
+    "TNSTC (State transport buses)",
+    "Chennai Suburban Rail",
+    "MRTS",
+    "Metro",
+    "Shared auto/shared tempo"
+  )))
+
+# Create the formatted kable table
+comm_mode_travel %>%
+  kbl(col.names = c("Mode of Travel", "Frequency", "Share (%)"),
+      caption = "Distribution of Travel Modes for Work Commute",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Mode of travel by gender
+```{r modeoftravekgender}
+comm_mode_travel_gender <- data %>% 
+  filter(!perinf_gender %in% c(-9999, -9998, -9997),
+         !is.na(comm_mode_travel)) %>%
+  mutate(
+    work_comm_mode = case_when(
+      comm_mode_travel == -9998 ~ "Do not know",
+      comm_mode_travel == -9999 ~ "Do not want to disclose",
+      comm_mode_travel == 1 ~ "Walk",
+      comm_mode_travel == 2 ~ "Bicycle",
+      comm_mode_travel == 3 ~ "Car/Van (own)",
+      comm_mode_travel == 4 ~ "Car (Uber, Ola, Taxi etc)",
+      comm_mode_travel == 5 ~ "2-Wheeler: scooter, motorbike (own)",
+      comm_mode_travel == 6 ~ "2-Wheeler (Rapido, Ola, etc)",
+      comm_mode_travel == 7 ~ "Auto-rickshaw",
+      comm_mode_travel == 8 ~ "Employer-provided transportation",
+      comm_mode_travel == 9 ~ "MTC buses/city bus",
+      comm_mode_travel == 10 ~ "TNSTC (State transport buses)",
+      comm_mode_travel == 11 ~ "Chennai Suburban Rail",
+      comm_mode_travel == 12 ~ "MRTS",
+      comm_mode_travel == 13 ~ "Metro",
+      comm_mode_travel == 14 ~ "Shared auto/shared tempo",
+      TRUE ~ NA_character_
+    ),
+    perinf_gender = case_when(
+      perinf_gender == 1 ~ "Male",
+      perinf_gender == 2 ~ "Female",
+      TRUE ~ NA_character_
+    )
+  )  %>% 
+  filter(!is.na(work_comm_mode)) %>% 
+  group_by(perinf_gender, work_comm_mode) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_mode, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Walk",
+    "Bicycle",
+    "Car/Van (own)",
+    "Car (Uber, Ola, Taxi etc)",
+    "2-Wheeler: scooter, motorbike (own)",
+    "2-Wheeler (Rapido, Ola, etc)",
+    "Auto-rickshaw",
+    "Employer-provided transportation",
+    "MTC buses/city bus",
+    "TNSTC (State transport buses)",
+    "Chennai Suburban Rail",
+    "MRTS",
+    "Metro",
+    "Shared auto/shared tempo"
+  )))
+
+# Create the formatted kable table
+comm_mode_travel_gender %>%
+  kbl(col.names = c("Commute mode", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Travel Modes",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+
+#Plot
+library(ggplot2)
+library(tidyr)
+
+# Prepare data for plotting
+plot_data <- comm_mode_travel_gender %>%
+  # Remove "Do not know" and "Do not want to disclose" for clearer visualization
+  filter(!is.na(work_comm_mode)) %>%
+  # Convert to long format for plotting
+  pivot_longer(
+    cols = c("Female", "Male"),
+    names_to = "Gender",
+    values_to = "Percentage"
+  )
+
+# # Create the plot
+# ggplot(plot_data, aes(x = Percentage, y = work_comm_mode, fill = Gender)) +
+#   geom_bar(
+#     stat = "identity",
+#     position = position_dodge(width = 0.9),
+#     width = 0.8
+#   ) +
+#   scale_fill_manual(
+#     values = c("Female" = "#4A8CFF", "Male" = "#003BA3")
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     axis.title.y = element_blank(),
+#     panel.grid.major.y = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     legend.position = "right",
+#     plot.title = element_text(hjust = 0.5, face = "bold"),
+#     axis.text = element_text(size = 10)
+#   ) +
+#   labs(
+#     title = "Distribution of Travel Modes by Gender",
+#     x = "Percentage (%)",
+#     fill = ""
+#   ) +
+#   scale_x_continuous(
+#     expand = c(0, 0),
+#     limits = c(0, max(plot_data$Percentage) * 1.1)
+#   )
+```
+
+Mode of travel by industry type
+
+```{r modeoftravelindustry}
+data %>%
+  mutate(
+    work_comm_mode = case_when(
+      comm_mode_travel == -9998 ~ "Do not know",
+      comm_mode_travel == -9999 ~ "Do not want to disclose",
+      comm_mode_travel == 1 ~ "Walk",
+      comm_mode_travel == 2 ~ "Bicycle",
+      comm_mode_travel == 3 ~ "Car/Van (own)",
+      comm_mode_travel == 4 ~ "Car (Uber, Ola, Taxi etc)",
+      comm_mode_travel == 5 ~ "2-Wheeler: scooter, motorbike (own)",
+      comm_mode_travel == 6 ~ "2-Wheeler (Rapido, Ola, etc)",
+      comm_mode_travel == 7 ~ "Auto-rickshaw",
+      comm_mode_travel == 8 ~ "Employer-provided transportation",
+      comm_mode_travel == 9 ~ "MTC buses/city bus",
+      comm_mode_travel == 10 ~ "TNSTC (State transport buses)",
+      comm_mode_travel == 11 ~ "Chennai Suburban Rail",
+      comm_mode_travel == 12 ~ "MRTS",
+      comm_mode_travel == 13 ~ "Metro",
+      comm_mode_travel == 14 ~ "Shared auto/shared tempo",
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(work_comm_mode),
+    !is.na(industry)
+  ) %>%
+  group_by(work_comm_mode, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(work_comm_mode) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_comm_mode,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_mode, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Walk",
+    "Bicycle",
+    "Car/Van (own)",
+    "Car (Uber, Ola, Taxi etc)",
+    "2-Wheeler: scooter, motorbike (own)",
+    "2-Wheeler (Rapido, Ola, etc)",
+    "Auto-rickshaw",
+    "Employer-provided transportation",
+    "MTC buses/city bus",
+    "TNSTC (State transport buses)",
+    "Chennai Suburban Rail",
+    "MRTS",
+    "Metro",
+    "Shared auto/shared tempo"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Industry Types by Mode of Travel (%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+
+11. Whether availing any subsidies for travel cost
+
+```{r subsidyfortravelcost}
+comm_travel_subsidy<-data %>%
+  mutate(work_comm_travel_subs=case_when(
+    comm_travel_subsidy == -9998 ~ "Do not know",
+    comm_travel_subsidy == -9999 ~ "Do not want to disclose",
+    comm_travel_subsidy == 1 ~ "No",
+    comm_travel_subsidy == 2 ~ "Free ticket for women",
+    comm_travel_subsidy == 3 ~ "Student bus pass",
+    comm_travel_subsidy == 4 ~ "Other",
+    TRUE ~ NA
+  )) %>%
+  filter(!is.na(work_comm_travel_subs)) %>% 
+  group_by(work_comm_travel_subs) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_comm_travel_subs, c(
+    "Do not know",
+    "Do not want to disclose",
+     "No",
+ "Free ticket for women",
+     "Student bus pass",
+    "Other"
+  )))
+# Create the formatted kable table
+comm_travel_subsidy %>%
+  kbl(col.names = c("Subsidy", "Freq", "Share"),
+      caption = "Whether availing subsidy for travel cost",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+12. Difficulty going to work (y/n)
+```{r difficultyy/n}
+#Difficulty going to work (yes/no)
+comm_travel_difficulty_yn<-data %>%
+  mutate(work_comm_travel_difficulty_yn=case_when(
+    comm_travel_difficulty_yn == -9998 ~ "Do not know",
+    comm_travel_difficulty_yn == -9999 ~ "Do not want to disclose",
+    comm_travel_difficulty_yn == 1 ~ "Yes",
+    comm_travel_difficulty_yn == 2 ~ "No",
+    TRUE ~ NA
+  ))  %>%
+  filter(!is.na(work_comm_travel_difficulty_yn)) %>% 
+  group_by(work_comm_travel_difficulty_yn) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_comm_travel_difficulty_yn, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Yes",
+    "No"
+  )))
+# Create the formatted kable table
+comm_travel_difficulty_yn %>%
+  kbl(col.names = c("Difficulty", "Freq", "Share"),
+      caption = "Has there been difficulty going to work",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+13. Type of difficulty faced
+
+```{r typeofdifficultyfaced}
+comm_travel_difficulty <- data %>%
+  mutate(work_comm_difficulty = case_when(
+    comm_travel_difficulty == -9997 ~ "Other reasons",
+    comm_travel_difficulty == -9998 ~ "Do not know",
+    comm_travel_difficulty == -9999 ~ "Do not want to answer",
+    comm_travel_difficulty == 1 ~ "There is no public transport available to that workplace",
+    comm_travel_difficulty == 2 ~ "Public transport is available to that workplace but I need to spend on private transport to access it",
+    comm_travel_difficulty == 3 ~ "The public transport fares to that workplace are high",
+    comm_travel_difficulty == 4 ~ "My home and that workplace is connected by public transport, but the distance is too long",
+    comm_travel_difficulty == 5 ~ "I (would have) needed to take multiple buses and/or trains to reach that workplace",
+    comm_travel_difficulty == 6 ~ "The nearest bus stop/train station that connects to the workplace is far away",
+    comm_travel_difficulty == 7 ~ "The frequency of public transport to that workplace is low and I (would have) spent a lot of time waiting",
+    comm_travel_difficulty == 8 ~ "I feel unsafe traveling",
+    comm_travel_difficulty == 9 ~ "The public transport vehicles are not comfortable",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(work_comm_difficulty)) %>% 
+  group_by(work_comm_difficulty) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(work_comm_difficulty, c("Other reasons",
+                                       "Do not know",
+                                       "Do not want to answer",
+                                      "There is no public transport available to that workplace",
+                                        "Public transport is available to that workplace but I need to spend on private transport to access it",
+                                         "The public transport fares to that workplace are high",
+                                        "My home and that workplace is connected by public transport, but the distance is too long",
+                                      "I (would have) needed to take multiple buses and/or trains to reach that workplace",
+                                       "The nearest bus stop/train station that connects to the workplace is far away",
+                                        "The frequency of public transport to that workplace is low and I (would have) spent a lot of time waiting",
+                                         "I feel unsafe traveling",
+                                        "The public transport vehicles are not comfortable"
+  )))
+
+# Create the formatted kable table
+comm_travel_difficulty %>%
+  kbl(col.names = c("Type of Difficulty", "Freq", "Share"),
+      caption = "Type of travel difficulty faced",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+type of difficulty by industry
+
+```{r typeofdifficultyindustry}
+data %>%
+  mutate(
+    work_comm_difficulty = case_when(
+      comm_travel_difficulty == -9997 ~ "Other reasons",
+      comm_travel_difficulty == -9998 ~ "Do not know",
+      comm_travel_difficulty == -9999 ~ "Do not want to answer",
+      comm_travel_difficulty == 1 ~ "There is no public transport available to that workplace",
+      comm_travel_difficulty == 2 ~ "Public transport is available to that workplace but I need to spend on private transport to access it",
+      comm_travel_difficulty == 3 ~ "The public transport fares to that workplace are high",
+      comm_travel_difficulty == 4 ~ "My home and that workplace is connected by public transport, but the distance is too long",
+      comm_travel_difficulty == 5 ~ "I (would have) needed to take multiple buses and/or trains to reach that workplace",
+      comm_travel_difficulty == 6 ~ "The nearest bus stop/train station that connects to the workplace is far away",
+      comm_travel_difficulty == 7 ~ "The frequency of public transport to that workplace is low and I (would have) spent a lot of time waiting",
+      comm_travel_difficulty == 8 ~ "I feel unsafe traveling",
+      comm_travel_difficulty == 9 ~ "The public transport vehicles are not comfortable",
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(
+    !is.na(work_comm_difficulty),
+    !is.na(industry)
+  ) %>%
+  group_by(work_comm_difficulty, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(work_comm_difficulty) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_comm_difficulty,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_difficulty, c(
+    "Other reasons",
+    "Do not know",
+    "Do not want to answer",
+    "There is no public transport available to that workplace",
+    "Public transport is available to that workplace but I need to spend on private transport to access it",
+    "The public transport fares to that workplace are high",
+    "My home and that workplace is connected by public transport, but the distance is too long",
+    "I (would have) needed to take multiple buses and/or trains to reach that workplace",
+    "The nearest bus stop/train station that connects to the workplace is far away",
+    "The frequency of public transport to that workplace is low and I (would have) spent a lot of time waiting",
+    "I feel unsafe traveling",
+    "The public transport vehicles are not comfortable"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Industry Types by Type of Travel Difficulty (%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(1, width = "300px") %>% # Make first column wider to accommodate long descriptions
+  scroll_box(width = "100%")
+```

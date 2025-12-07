@@ -1,0 +1,827 @@
+---
+title: "HH_Commute and employment tiers"
+author: "Radhika Pande"
+date: "2025-01-09"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(survey)
+library(tidyr)
+library(dplyr)
+library(readr)
+library(readxl)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(tibble)
+library(sysfonts)
+library(showtext)
+```
+
+```{r data, include=FALSE}
+df_hh_joined<- read.csv("D://cmda_final//household//Data//CMDA_SDEIC_HH_imputed.csv")
+
+df_hh <- df_hh_joined %>% distinct(uuid, .keep_all = TRUE)
+
+hh_income <- read.csv("D://cmda_final//household//Data//Household_income_variables.csv") %>% select(-X)
+
+ind_income <- read.csv("D://cmda_final//household//Data//indiv_income_variable_corrected.csv") %>% 
+  select(uuid, index, mon_indi_inc_no_shock , mon_indi_inc_with_shock) 
+
+df_hh_joined <- df_hh_joined %>% left_join(ind_income, by = c("uuid" = "uuid",
+                                                               "index.x" = "index"))
+
+df_hh_joined <- df_hh_joined %>% left_join(hh_income, by = "uuid")
+
+asset_index <- read.csv("D://cmda_final//household//Data//Asset_index.csv") %>% 
+  select(-X)
+
+
+
+#Reading Joined Data with Income variable
+df_hh_income <- read_csv("D://cmda_final//household//Data//Joined Data-with_income.csv")%>%
+  select("uuid", "combined_income_c")
+
+df_hh_joined$combined_income_c <- df_hh_income$combined_income_c
+
+
+#defining age groups
+df_hh_joined <- df_hh_joined %>% mutate(
+  age_group = case_when(
+    hhr_age <1 ~ "Less than one",
+    between(hhr_age,1,14) ~ "1 to 14",
+    between(hhr_age,15,20) ~ "15 to 20",
+    between(hhr_age,21,30) ~ "21 to 30",
+    between(hhr_age,31,40) ~ "31 to 40",
+    between(hhr_age,41,50) ~ "41 to 50",
+    between(hhr_age,51,60) ~ "51 to 60",
+    between(hhr_age,61,70) ~ "61 to 70",
+    hhr_age>70 ~ "Above 70",
+    .default = "Others"
+  )
+)
+#Adding Wealth Index
+wealth_df <- read_csv("D://cmda_final//household//Data//wealth_index.csv")
+
+df_hh_joined <- left_join(df_hh_joined, wealth_df, by = "uuid")
+
+wealth_df <- left_join(wealth_df, df_hh, by = "uuid")
+#setting survey design
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+
+household_design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight, data = df_hh, nest= TRUE)
+deciles_wealth_index<- wealth_df %>%  
+                 arrange(wealth_index)%>%
+                 mutate(Cum_Sum = cumsum(hh_weight))
+
+
+deciles_wealth_index <- deciles_wealth_index %>%
+  mutate(
+    deciles = cut(
+      Cum_Sum,
+      breaks = c(0,
+                 max(Cum_Sum)/10,2*max(Cum_Sum)/10,
+                 3*max(Cum_Sum)/10,4*max(Cum_Sum)/10,
+                 5*max(Cum_Sum)/10,6*max(Cum_Sum)/10,
+                 7*max(Cum_Sum)/10,8*max(Cum_Sum)/10,
+                 9*max(Cum_Sum)/10,max(Cum_Sum) + 1), # Fixing the last upper bound to max(Cum_Sum) + 1
+      labels = 1:10,
+      include.lowest = TRUE
+    )
+  )
+
+deciles_wealth_index <- deciles_wealth_index%>%
+  select("uuid", "deciles")
+
+#Adding wealth index deciles to df_hh_joined
+df_hh_joined <- inner_join(df_hh_joined,deciles_wealth_index,by = "uuid")
+
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+
+tb_decile <- svyby(~wealth_index,~hhr_occ_seo,design = design,FUN = svymean,na.rm = TRUE)
+# 
+# tb_deciles <- as.data.frame(tb_decile)%>%
+#   mutate(hhr_occ_seo = c("Others", "Don't Know", "Refuse",
+#                          "Trade/Business", "Professional Service",
+#                          "Informal Service","Agriculture"))%>%
+#   arrange(wealth_index)%>%
+#   set_names("Occupations", "Avg. Wealth Index","SE")
+# 
+# kable(tb_deciles, caption = "Mean of  wealth index among Self Employed Own A/c", padding = 30) %>%
+#   kable_styling()
+
+temp <- df_hh_joined %>%
+  filter(hhr_emp_status==1 & hhr_occ_seo ==1)%>%
+  group_by(deciles)%>%
+  summarise(estimated_population_in_decile = sum(hh_weight.x))%>%
+  mutate(percentage_of_population_in_decile = round(estimated_population_in_decile/sum(estimated_population_in_decile)*100,2),
+         cum_sum_percentage = cumsum(percentage_of_population_in_decile))
+
+kable(temp,caption = "Wealth Index deciles among Own Account Traders/Business", padding = 50) %>%
+  kable_styling()
+
+```
+
+```{r emptiers,include=FALSE}
+#Creating a column of tiers based on employment and occupation
+df_hh_joined$deciles <- as.numeric(df_hh_joined$deciles)
+
+df_hh_joined$hhr_entsize <- as.numeric(df_hh_joined$hhr_entsize)
+df_hh_joined <- df_hh_joined %>%
+  mutate(
+    # For Daily Wage
+    daily_wage_tiers = case_when(
+      hhr_emp_status == 6 & hhr_occ_wage == 1 ~ "Agri Worker",
+      hhr_emp_status == 6 & hhr_occ_wage != 1 ~ "Unskilled Worker",
+      TRUE ~ NA_character_
+    ),
+    # For Salaried Private
+    salaried_pvt_tiers = case_when(
+      hhr_emp_status == 4 & hhr_occ_pvt == 1 ~ "Professional & Skilled Worker",
+      hhr_emp_status == 4 & hhr_occ_pvt == 2 ~ "Professional & Skilled Worker",
+      hhr_emp_status == 4 & hhr_occ_pvt == 3 ~ "Unskilled Worker",
+      hhr_emp_status == 4 & hhr_occ_pvt < 0 ~ "Unclassified",
+      TRUE ~ NA_character_
+    ),
+    # For Salaried Government
+    salaried_gov_tiers = case_when(
+      hhr_emp_status == 3 & hhr_occ_gov %in% c(1, 2, 5, 6) ~ "Professional & Skilled Worker",
+      hhr_emp_status == 3 & !(hhr_occ_gov %in% c(1, 2, 5, 6)) ~ "Professional & Skilled Worker",
+      TRUE ~ NA_character_
+    ),
+    # For Informal
+    informal_tiers = case_when(
+      hhr_emp_status == 7 & hhr_occ_inf %in% c(10, 11) ~ "Agri Worker",
+      hhr_emp_status == 7 & !(hhr_occ_inf %in% c(10, 11)) ~ "Unskilled Worker",
+      TRUE ~ NA_character_
+    ),
+    # For Gig Worker
+    gig_tiers = ifelse(hhr_emp_status == 5, "Gig Worker", NA),
+  
+    # For Self-Employed Own A/c
+    seo_tiers = case_when(
+      hhr_emp_status == 1 & hhr_occ_seo == 2 ~ "Professional & Skilled Worker",
+      hhr_emp_status == 1 & hhr_occ_seo == 3 ~ "Unskilled Worker",
+      hhr_emp_status == 1 & hhr_occ_seo == 4 ~ "Agri Worker",
+      hhr_emp_status == 1 & hhr_occ_seo < 0 ~ "Unclassified",
+      hhr_emp_status == 1 & hhr_occ_seo == 1 & deciles > 7 ~ "Owner/Manager - Formal",
+      hhr_emp_status == 1 & hhr_occ_seo == 1 & deciles <= 7 ~ "Owner/Manager - Informal",
+      TRUE ~ NA_character_
+    ),
+  
+    # For Self-Employed Employer
+    see_tiers = case_when(
+      hhr_emp_status == 2 & hhr_occ_see == 1 & hhr_entsize > 1 ~ "Owner/Manager - Formal",
+      hhr_emp_status == 2 & hhr_occ_see == 1 & hhr_entsize <= 1 ~ "Owner/Manager - Informal",
+      hhr_emp_status == 2 & hhr_occ_see == 3 ~ "Agri Worker",
+      hhr_emp_status == 2 & hhr_entsize > 1 & !(hhr_occ_see %in% c(1, 3)) ~
+        "Owner/Manager - Formal",
+      hhr_emp_status == 2 & hhr_entsize <=1  & !(hhr_occ_see %in% c(1, 3)) ~
+        "Owner/Manager - Informal",
+      TRUE ~ NA_character_
+    ),
+  
+    # For Others
+    others_tiers = case_when(
+      hhr_emp_status < 0 ~ "Unclassified",
+      TRUE ~ NA_character_
+    )
+  )
+
+
+# write.csv(df_hh_joined,"temp.csv")
+
+df_hh_joined <- df_hh_joined %>%
+  mutate(tiers_final = case_when(
+    hhr_emp_status ==1 ~ seo_tiers,
+    hhr_emp_status ==2 ~ see_tiers,
+    hhr_emp_status ==3 ~ salaried_gov_tiers,
+    hhr_emp_status ==4 ~salaried_pvt_tiers,
+    hhr_emp_status ==5 ~gig_tiers,
+    hhr_emp_status ==6 ~daily_wage_tiers,
+    hhr_emp_status ==7 ~informal_tiers,
+    hhr_emp_status <0 ~others_tiers,
+    TRUE~ NA_character_
+  ))
+
+
+df_hh_joined <- df_hh_joined %>% mutate(
+  tiers_final = factor(tiers_final,
+                       levels = c("Owner/Manager - Formal",
+                       "Owner/Manager - Informal", "Professional & Skilled Worker",
+                       "Unskilled Worker", "Gig Worker", "Agri Worker",
+                       "Unclassified")))
+
+tiers <- df_hh_joined %>%
+  select(hhr_emp_status,hhr_occ_gig,hhr_occ_gov,
+         hhr_occ_inf,hhr_occ_pvt,hhr_occ_see,
+         hhr_occ_seo,hhr_occ_wage,tiers_final)
+
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+# Add Arial to the font families
+font_add("Arial", regular = "arial.ttf")
+showtext_auto()
+
+tiers_dist_svy <- svytable(~tiers_final,design)
+
+tiers_dist <- as.data.frame(tiers_dist_svy)%>%
+  mutate(percentage_of_workers= round(Freq/sum(Freq)*100,2))%>%
+  arrange(desc(percentage_of_workers))
+
+kable(tiers_dist, caption = "Distribution of working working population by tier", padding = 20) %>%
+  kable_styling()
+# First modify the data to add line breaks and set order
+ tiers_dist <- tiers_dist %>%
+   mutate(tiers_final = case_when(
+     tiers_final == "Professional & Skilled Worker" ~ "Professional &\nSkilled Worker",
+     tiers_final == "Owner/Manager - Formal" ~ "Owner/Manager -\nFormal",
+     tiers_final == "Owner/Manager - Informal" ~ "Owner/Manager -\nInformal",
+     tiers_final == "Gig Worker" ~ "Gig\nWorker",
+     tiers_final == "Agri Worker" ~ "Agri\nWorker",
+     tiers_final == "Unskilled Worker" ~ "Unskilled\nWorker",
+     tiers_final == "Unclassified" ~ "Unclassified",
+     TRUE ~ as.character(tiers_final)
+   ))
+ 
+ # Set the desired order
+ class_order <- c("Owner/Manager -\nFormal",
+                  "Owner/Manager -\nInformal", 
+                  "Professional &\nSkilled Worker",
+                  "Unskilled\nWorker", 
+                  "Gig\nWorker", 
+                  "Agri\nWorker",
+                  "Unclassified")
+ 
+ # Convert to factor with specified order
+ tiers_dist$tiers_final <- factor(tiers_dist$tiers_final, 
+                                  levels = class_order)
+ 
+# Specify Arial in the plot
+theme(axis.title = element_text(family = "Arial"))
+ 
+ # Create the bar chart
+ ggplot(tiers_dist, aes(x = tiers_final, y = percentage_of_workers)) +
+   geom_bar(stat = "identity",
+            fill = "#003BA3",
+            width = 0.7) +
+   geom_text(aes(label = percentage_of_workers),
+             vjust = -0.5,
+             family = "Arial",
+             size = 4.5) +
+   labs(title = "Distribution of Workers by Class",
+        x = "Class",
+        y = "Percentage (%)") +
+   theme_minimal() +
+   theme(
+     axis.title.x = element_text(
+       family = "Arial", size = 14, 
+       margin = margin(t = 10, b = 0)
+     ),
+     axis.title.y = element_text(
+       family = "Arial", size = 14, 
+       margin = margin(r = 10, l = 0)
+     ),
+     axis.text.x = element_text(
+       family = "Arial", size = 11, 
+       colour = "black", hjust = 0.5, 
+       margin = margin(t = 5),
+       angle = 0
+     ),
+     axis.text.y = element_text(
+       family = "Arial", size = 12, 
+       colour = "black", 
+       margin = margin(r = 5)
+     ),
+     plot.title = element_text(
+       family = "Arial", face = "bold", 
+       size = 22, hjust = 0.5, 
+       colour = "black", 
+       margin = margin(b = 10)
+     ),
+     panel.grid = element_line(color = "gray90"),
+     axis.line = element_line(color = "gray90", size = 0.5)
+   ) +
+   scale_y_continuous(
+     limits = function(x) c(0, max(x) * 1.15),
+     expand = c(0, 0)
+   )
+ 
+```
+
+#Commute distances and employment tiers cross tab
+```{r commutedistemptiers}
+df_hh_joined<-df_hh_joined %>%
+  mutate(
+    hhr_work_dist_cat= case_when(
+      hhr_commute_days == 1 ~ "Work from home",
+      hhr_commute_location == 1 &  hhr_work_dist == 1 ~ "Fixed Location:Less than 5 km",
+      hhr_commute_location == 1 &  hhr_work_dist == 2 ~ "Fixed Location:5-10km",
+      hhr_commute_location == 1 &  hhr_work_dist == 3 ~ "Fixed Location:10-15 km",
+      hhr_commute_location == 1 &  hhr_work_dist == 4 ~ "Fixed Location:15-20 km",
+      hhr_commute_location == 1 &  hhr_work_dist == 5 ~ "Fixed Location:20 to 50 km",
+      hhr_commute_location == 1 &  hhr_work_dist == 6 ~ "Fixed Location:50 to 100 km",
+      hhr_commute_location == 1 &  hhr_work_dist == 7 ~ "Fixed Location:More than 100 km",
+      
+      hhr_commute_location == 2 &  hhr_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      hhr_commute_location == 2 &  hhr_work_dist_mult == 2 ~ "Multiple locations: 5-10 km",
+      hhr_commute_location == 2 &  hhr_work_dist_mult == 3 ~ "Multiple locations: 10-15 km",
+      hhr_commute_location == 2 &  hhr_work_dist_mult == 4 ~ "Multiple locations: 15-20 km",
+      hhr_commute_location == 2 &  hhr_work_dist_mult == 5 ~ "Multiple locations: 20-50 km",
+      hhr_commute_location == 2 &  hhr_work_dist_mult == 6 ~ "Multiple locations: 50-100 km",
+      hhr_commute_location == 2 &  hhr_work_dist_mult == 7 ~ "Multiple locations: More than 100 km",
+      
+      hhr_commute_location == 3 ~ "No fixed location, it varies every day",
+       # Don't know and don't want to disclose responses
+      hhr_commute_location == -9998 | hhr_work_dist == -9998 | hhr_work_dist_mult == -9998 ~ "Do not know",
+      hhr_commute_location == -9999 | hhr_work_dist == -9999 | hhr_work_dist_mult == -9999 ~ "Do not want to disclose",
+      TRUE ~ NA_character_
+    )
+  )
+
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+
+# Create the cross tabulation
+work_dist <- svytable(~hhr_work_dist_cat + tiers_final, design)
+
+# Convert to dataframe and reshape
+work_dist_df <- as.data.frame(work_dist) %>%
+  pivot_wider(names_from = "tiers_final", values_from = "Freq")
+
+# Define the desired order
+order_levels <- c(
+  "Work from home",
+  "Fixed Location:Less than 5 km",
+  "Fixed Location:5-10km",
+  "Fixed Location:10-15 km",
+  "Fixed Location:15-20 km",
+  "Fixed Location:20 to 50 km",
+  "Fixed Location:50 to 100 km",
+  "Fixed Location:More than 100 km",
+  "Multiple locations: Less than 5 km",
+  "Multiple locations: 5-10 km",
+  "Multiple locations: 10-15 km",
+  "Multiple locations: 15-20 km",
+  "Multiple locations: 20-50 km",
+  "Multiple locations: 50-100 km",
+  "Multiple locations: More than 100 km",
+  "No fixed location, it varies every day",
+  "Do not know",
+  "Do not want to disclose"
+)
+
+colsums_dist <- colSums(work_dist_df[,2:7])
+work_dist_df_perc <- round(sweep(work_dist_df[,2:7], 2, colsums_dist, FUN = "/") * 100, 2) %>%
+  cbind(Work_Distance = work_dist_df$hhr_work_dist_cat) %>%
+  select(last_col(), everything()) %>%
+  mutate(Work_Distance = factor(Work_Distance, levels = order_levels)) %>%
+  arrange(Work_Distance)
+
+# Create formatted table
+kable(work_dist_df_perc, 
+      caption = "Work Distance Distribution among each Tier", 
+      padding = 40) %>%
+  kable_styling()
+```
+
+#Combining 5-10 and 10-15 km, 15-20 and 20-50 km and 50-100 and more than 100 km
+```{r combinedcmmute}
+df_hh_joined<-df_hh_joined %>%
+  mutate(
+    hhr_work_dist_cat= case_when(
+      hhr_commute_days == 1 ~ "Work from home",
+      hhr_commute_location == 1 &  hhr_work_dist == 1 ~ "Fixed Location:Less than 5 km",
+      hhr_commute_location == 1 &  (hhr_work_dist == 2 | hhr_work_dist == 3) ~ "Fixed Location:5-15 km",
+      hhr_commute_location == 1 &  (hhr_work_dist == 4 | hhr_work_dist == 5) ~ "Fixed Location:15-50 km",
+      hhr_commute_location == 1 &  (hhr_work_dist == 6 | hhr_work_dist == 7) ~ "Fixed Location:More than 50 km",
+      
+      hhr_commute_location == 2 &  hhr_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      hhr_commute_location == 2 &  (hhr_work_dist_mult == 2 | hhr_work_dist_mult == 3) ~ "Multiple locations: 5-15 km",
+      hhr_commute_location == 2 &  (hhr_work_dist_mult == 4 | hhr_work_dist_mult == 5) ~ "Multiple locations: 15-50 km",
+      hhr_commute_location == 2 &  (hhr_work_dist_mult == 6 | hhr_work_dist_mult == 7) ~ "Multiple locations: More than 50 km",
+      
+      hhr_commute_location == 3 ~ "No fixed location, it varies every day",
+      # Don't know and don't want to disclose responses
+      hhr_commute_location == -9998 | hhr_work_dist == -9998 | hhr_work_dist_mult == -9998 ~ "Do not know",
+      hhr_commute_location == -9999 | hhr_work_dist == -9999 | hhr_work_dist_mult == -9999 ~ "Do not want to disclose",
+      TRUE ~ NA_character_
+    )
+  )
+
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+
+# Create the cross tabulation
+work_dist <- svytable(~hhr_work_dist_cat + tiers_final, design)
+
+# Convert to dataframe and reshape
+work_dist_df <- as.data.frame(work_dist) %>%
+  pivot_wider(names_from = "tiers_final", values_from = "Freq")
+
+# Define the new order with combined categories
+order_levels <- c(
+  "Work from home",
+  "Fixed Location:Less than 5 km",
+  "Fixed Location:5-15 km",
+  "Fixed Location:15-50 km",
+  "Fixed Location:More than 50 km",
+  "Multiple locations: Less than 5 km",
+  "Multiple locations: 5-15 km",
+  "Multiple locations: 15-50 km",
+  "Multiple locations: More than 50 km",
+  "No fixed location, it varies every day",
+  "Do not know",
+  "Do not want to disclose"
+)
+
+# Calculate column percentages and format table
+colsums_dist <- colSums(work_dist_df[,2:7])
+work_dist_df_perc <- round(sweep(work_dist_df[,2:7], 2, colsums_dist, FUN = "/") * 100, 2) %>%
+  cbind(Work_Distance = work_dist_df$hhr_work_dist_cat) %>%
+  select(last_col(), everything()) %>%
+  mutate(Work_Distance = factor(Work_Distance, levels = order_levels)) %>%
+  arrange(Work_Distance)
+
+# Create formatted table
+kable(work_dist_df_perc, 
+      caption = "Work Distance Distribution among each Tier", 
+      padding = 40) %>%
+  kable_styling()
+```
+
+Overall commute time and employment tiers cross tab
+```{r emptiersoverallcommute}
+df_hh_joined<-df_hh_joined %>%
+  mutate(
+    hhr_work_time_cat= case_when(
+      hhr_commute_days == 1 ~ "Work from home",
+      hhr_commute_location == 1 &  hhr_1wtime == 1 ~ "Fixed location: Less than 15 mins",
+      hhr_commute_location == 1 &  hhr_1wtime == 2 ~ "Fixed location: 15-30 mins",
+      hhr_commute_location == 1 &  hhr_1wtime == 3 ~ "Fixed location: 30-45 mins",
+      hhr_commute_location == 1 &  hhr_1wtime == 4 ~ "Fixed location: 45 mins to 1 hour",
+      hhr_commute_location == 1 &  hhr_1wtime == 5 ~ "Fixed location: 1 to 2 hours",
+      hhr_commute_location == 1 &  hhr_1wtime == 6 ~ "Fixed location: More than 2 hours",
+      
+      hhr_commute_location == 2 &  hhr_time_mult == 1 ~ "Multiple locations: Less than 15 mins",
+      hhr_commute_location == 2 &  hhr_time_mult == 2 ~ "Multiple locations: 15-30 mins",
+      hhr_commute_location == 2 &  hhr_time_mult == 3 ~ "Multiple locations: 30-45 mins",
+      hhr_commute_location == 2 &  hhr_time_mult == 4 ~ "Multiple locations: 45 mins to 1 hour",
+      hhr_commute_location == 2 &  hhr_time_mult == 5 ~ "Multiple locations: 1 to 2 hours",
+      hhr_commute_location == 2 &  hhr_time_mult == 6 ~ "Multiple locations: More than 2 hours",
+      
+      hhr_commute_location == 3 ~ "No fixed location, it varies every day",
+       # Don't know and don't want to disclose responses
+      hhr_commute_location == -9998 | hhr_1wtime == -9998 | hhr_time_mult == -9998 ~ "Do not know",
+      hhr_commute_location == -9999 | hhr_1wtime == -9999 |hhr_time_mult == -9999 ~ "Do not want to disclose",
+      TRUE ~ NA_character_
+    )
+  )
+
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+
+# Create the cross tabulation
+work_time <- svytable(~ hhr_work_time_cat + tiers_final, design)
+
+# Convert to data frame and reshape
+work_time_df <- as.data.frame(work_time ) %>%
+  pivot_wider(names_from = "tiers_final", values_from = "Freq")
+# Define the desired order
+order_levels <- c(
+  "Work from home",
+  "Fixed location: Less than 15 mins",
+  "Fixed location: 15-30 mins",
+  "Fixed location: 30-45 mins",
+  "Fixed location: 45 mins to 1 hour",
+  "Fixed location: 1 to 2 hours",
+  "Fixed location: More than 2 hours",
+  "Multiple locations: Less than 15 mins",
+  "Multiple locations: 15-30 mins",
+  "Multiple locations: 30-45 mins",
+  "Multiple locations: 45 mins to 1 hour",
+  "Multiple locations: 1 to 2 hours",
+  "Multiple locations: More than 2 hours",
+  "No fixed location, it varies every day",
+  "Do not know",
+  "Do not want to disclose"
+)
+
+
+# Calculate column percentages
+colsums_dist <- colSums(work_time_df[,2:7])
+work_time_df_perc <- round(sweep(work_time_df[,2:7], 2, colsums_dist, FUN = "/") * 100, 2) %>%
+  cbind(Work_Time = work_time_df$hhr_work_time_cat) %>%
+  select(last_col(), everything())%>%
+  mutate(Work_Time = factor(Work_Time, levels = order_levels)) %>%
+  arrange(Work_Time)
+
+# Create formatted table
+kable(work_time_df_perc, 
+      caption = "Commute Time Distribution among each Tier", 
+      padding = 40) %>%
+  kable_styling()
+
+
+```
+
+#Commute combined time and employment tiers (30-45mins and 45-60mins into 30-60mins and 1-2 and more than 2 hours into more than 1 hour)
+```{r emptierscombinedtime}
+df_hh_joined<-df_hh_joined %>%
+  mutate(
+    hhr_work_time_cat= case_when(
+      hhr_commute_days == 1 ~ "Work from home",
+      hhr_commute_location == 1 &  hhr_1wtime == 1 ~ "Fixed location: Less than 15 mins",
+      hhr_commute_location == 1 &  hhr_1wtime == 2 ~ "Fixed location: 15-30 mins",
+      hhr_commute_location == 1 &  (hhr_1wtime == 3 | hhr_1wtime == 4) ~ "Fixed location: 30-60 mins",
+      hhr_commute_location == 1 &  (hhr_1wtime == 5 | hhr_1wtime == 6) ~ "Fixed location: More than 1 hour",
+      
+      hhr_commute_location == 2 &  hhr_time_mult == 1 ~ "Multiple locations: Less than 15 mins",
+      hhr_commute_location == 2 &  hhr_time_mult == 2 ~ "Multiple locations: 15-30 mins",
+      hhr_commute_location == 2 &  (hhr_time_mult == 3 | hhr_time_mult == 4) ~ "Multiple locations: 30-60 mins",
+      hhr_commute_location == 2 &  (hhr_time_mult == 5 | hhr_time_mult == 6) ~ "Multiple locations: More than 1 hour",
+      
+      hhr_commute_location == 3 ~ "No fixed location, it varies every day",
+      # Don't know and don't want to disclose responses
+      hhr_commute_location == -9998 | hhr_1wtime == -9998 | hhr_time_mult == -9998 ~ "Do not know",
+      hhr_commute_location == -9999 | hhr_1wtime == -9999 |hhr_time_mult == -9999 ~ "Do not want to disclose",
+      TRUE ~ NA_character_
+    )
+  )
+
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+# Create the cross tabulation
+work_time <- svytable(~ hhr_work_time_cat + tiers_final, design)
+
+# Convert to data frame and reshape
+work_time_df <- as.data.frame(work_time ) %>%
+  pivot_wider(names_from = "tiers_final", values_from = "Freq")
+# Define the desired order
+order_levels <- c(
+  "Work from home",
+  "Fixed location: Less than 15 mins",
+  "Fixed location: 15-30 mins",
+  "Fixed location: 30-60 mins",
+  "Fixed location: More than 1 hour",
+  "Multiple locations: Less than 15 mins",
+  "Multiple locations: 15-30 mins",
+  "Multiple locations: 30-60 mins",
+  "Multiple locations: More than 1 hour",
+  "No fixed location, it varies every day",
+  "Do not know",
+  "Do not want to disclose"
+)
+
+# Calculate column percentages
+colsums_dist <- colSums(work_time_df[,2:7])
+work_time_df_perc <- round(sweep(work_time_df[,2:7], 2, colsums_dist, FUN = "/") * 100, 2) %>%
+  cbind(Work_Time = work_time_df$hhr_work_time_cat) %>%
+  select(last_col(), everything()) %>%
+  mutate(Work_Time = factor(Work_Time, levels = order_levels)) %>%
+  arrange(Work_Time)
+
+# Create formatted table
+kable(work_time_df_perc, 
+      caption = "Commute Time Distribution among each Employment Tiers", 
+      padding = 40) %>%
+  kable_styling()
+
+```
+
+#Commute one-way time and employment tiers cross tab
+```{r commuteonewaytime}
+#time taken to travel
+df_hh_joined<- df_hh_joined %>%
+  mutate(
+   hhr_1wtime_cat = case_when(
+      hhr_1wtime == 1 ~ "Less than 15 mins",
+      hhr_1wtime == 2 ~ "15-30 mins",
+      hhr_1wtime == 3 ~ "30-45 mins",
+      hhr_1wtime == 4 ~ "45 mins to 1 hour",
+      hhr_1wtime == 5 ~ "1 to 2 hours",
+      hhr_1wtime == 6 ~ "More than 2 hours",
+      hhr_1wtime == -9999 ~ "Do not want to disclose",
+      hhr_1wtime == -9998 ~ "Do not know",
+      TRUE ~ NA_character_ # Handle any other values
+    )
+  )
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+
+# Create the cross tabulation
+oneway_time <- svytable(~hhr_1wtime_cat + tiers_final, design)
+
+# Convert to dataframe and reshape
+oneway_time_df <- as.data.frame(oneway_time) %>%
+  pivot_wider(names_from = "tiers_final", values_from = "Freq")
+
+order_levels<- c(
+  "Less than 15 mins",
+  "15-30 mins",
+ "30-45 mins",
+ "45 mins to 1 hour",
+  "1 to 2 hours",
+  "More than 2 hours",
+  "Do not know",
+"Do not want to disclose"
+  
+)
+
+# Calculate column percentages
+colsums_dist <- colSums(oneway_time_df[,2:7])
+oneway_time_df_perc <- round(sweep(oneway_time_df[,2:7], 2, colsums_dist, FUN = "/") * 100, 2) %>%
+  cbind(Work_Time = oneway_time_df$hhr_1wtime_cat) %>%
+  select(last_col(), everything())%>%
+  mutate(Work_Time = factor(Work_Time, levels = order_levels)) %>%
+  arrange(Work_Time)
+
+# Create formatted table
+kable(oneway_time_df_perc, 
+      caption = "One way commute time distribution among each Tier", 
+      padding = 40) %>%
+  kable_styling()
+```
+
+#Commute total time taken for multiple work locations by employment tiers
+```{r totaltimemwl}
+df_hh_joined<- df_hh_joined %>%
+  mutate(
+   hhr_time_cat = case_when(
+      hhr_time_mult == 1 ~ "Less than 15 mins",
+      hhr_time_mult == 2 ~ "15-30 mins",
+      hhr_time_mult == 3 ~ "30-45 mins",
+      hhr_time_mult == 4 ~ "45 mins to 1 hour",
+      hhr_time_mult == 5 ~ "1 to 2 hours",
+      hhr_time_mult == 6 ~ "More than 2 hours",
+      hhr_time_mult == -9999 ~ "Do not want to disclose",
+      hhr_time_mult == -9998 ~ "Do not know",
+      TRUE ~ NA_character_ # Handle any other values
+    )
+  )
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+
+# Create the cross tabulation
+total_time <- svytable(~hhr_time_cat + tiers_final, design)
+
+# Convert to dataframe and reshape
+total_time_df <- as.data.frame(total_time) %>%
+  pivot_wider(names_from = "tiers_final", values_from = "Freq")
+order_levels<- c(
+  "Less than 15 mins",
+  "15-30 mins",
+ "30-45 mins",
+ "45 mins to 1 hour",
+  "1 to 2 hours",
+  "More than 2 hours",
+  "Do not know",
+"Do not want to disclose"
+  
+)
+
+# Calculate column percentages
+colsums_dist <- colSums(total_time_df[,2:7])
+total_time_df_perc <- round(sweep(total_time_df[,2:7], 2, colsums_dist, FUN = "/") * 100, 2) %>%
+  cbind(Work_Time = total_time_df$hhr_time_cat) %>%
+  select(last_col(), everything())%>%
+  mutate(Work_Time = factor(Work_Time, levels = order_levels)) %>%
+  arrange(Work_Time)
+
+# Create formatted table
+kable(total_time_df_perc, 
+      caption = "Total commute time (mwl) distribution among each Tier", 
+      padding = 40) %>%
+  kable_styling()
+```
+
+#Commute cost by employment tiers
+```{r costemptiers}
+df_hh_joined <- df_hh_joined %>%
+  mutate(
+    hhr_travel_cost_cat = case_when(
+      hhr_travel_cost == 1 ~ "No expenses (work from home/commute by walk/cycle)",
+      hhr_travel_cost == 2 ~ "INR 25 or less",
+      hhr_travel_cost == 3 ~ "INR 26-50",
+      hhr_travel_cost == 4 ~ "INR 51-100",
+      hhr_travel_cost == 5 ~ "INR 101-150",
+      hhr_travel_cost == 6 ~ "INR 151-300",
+      hhr_travel_cost == 7 ~ "INR 301-500",
+      hhr_travel_cost == 8 ~ "More than 500",
+      hhr_travel_cost == -9999 ~ "Do not want to disclose",
+      hhr_travel_cost == -9998 ~ "Do not know",
+      TRUE ~ NA_character_ # Handle any other values
+    )
+  )
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+
+# Create the cross tabulation
+total_cost <- svytable(~ hhr_travel_cost_cat + tiers_final, design)
+
+# Convert to dataframe and reshape
+total_cost_df <- as.data.frame(total_cost) %>%
+  pivot_wider(names_from = "tiers_final", values_from = "Freq")
+
+order_levels<-c (
+"No expenses (work from home/commute by walk/cycle)",
+"INR 25 or less",
+"INR 26-50",
+"INR 51-100",
+"INR 101-150",
+"INR 151-300",
+"INR 301-500",
+"More than 500",
+"Do not know",
+"Do not want to disclose"
+)
+
+# Calculate column percentages
+colsums_dist <- colSums(total_cost_df[,2:7])
+total_cost_df_perc <- round(sweep(total_cost_df[,2:7], 2, colsums_dist, FUN = "/") * 100, 2) %>%
+  cbind(Work_Cost = total_cost_df$ hhr_travel_cost_cat) %>%
+  select(last_col(), everything())%>%
+  mutate(Work_Cost = factor(Work_Cost, levels = order_levels)) %>%
+  arrange(Work_Cost)
+
+# Create formatted table
+kable(total_cost_df_perc, 
+      caption = "Total cost distribution among each tier", 
+      padding = 40) %>%
+  kable_styling()
+```
+
+
+
+# Commute modes by employment tiers
+```{r commutemodeemptiers}
+df_hh_joined <- df_hh_joined %>%
+  mutate(
+    walk = if_else(`hhr_mode_travel_1` == 1, 1, 0),
+    bicycle = if_else(`hhr_mode_travel_2` == 1, 1, 0),
+    car_van_own = if_else(`hhr_mode_travel_3` == 1, 1, 0),
+    car_ride_share = if_else(`hhr_mode_travel_4` == 1, 1, 0),
+    two_wheeler_own = if_else(`hhr_mode_travel_5` == 1, 1, 0),
+    two_wheeler_service = if_else(`hhr_mode_travel_6` == 1, 1, 0),
+    auto_rickshaw = if_else(`hhr_mode_travel_7` == 1, 1, 0),
+    employer_transport = if_else(`hhr_mode_travel_8` == 1, 1, 0),
+    bus_combined = if_else(`hhr_mode_travel_9` == 1 | `hhr_mode_travel_10` == 1, 1, 0), # Combine MTC and TNSTC buses
+    suburban_rail = if_else(`hhr_mode_travel_11` == 1, 1, 0),  # Keep Suburban Rail separate
+    mrt = if_else(`hhr_mode_travel_12` == 1, 1, 0),
+    metro = if_else(`hhr_mode_travel_13` == 1, 1, 0),
+    shared_auto = if_else(`hhr_mode_travel_14` == 1, 1, 0)
+  )
+design <- svydesign(id = ~final_svy_block, strata = ~final_stratum, weights = ~hh_weight.x, data = df_hh_joined, nest = TRUE) 
+# Calculate proportions for each mode by tier
+modes_by_tier <- data.frame(Mode = character(), 
+                           Tier = character(), 
+                           Proportion = numeric())
+
+# List of all modes
+mode_vars <- c("walk", "bicycle", "car_van_own", "car_ride_share", 
+               "two_wheeler_own", "two_wheeler_service", "auto_rickshaw",
+               "employer_transport", "bus_combined", "suburban_rail", 
+               "mrt", "metro", "shared_auto")
+
+# Mode labels (prettier names for display)
+mode_labels <- c(
+    "Walk", 
+    "Bicycle", 
+    "Car/Van (own)", 
+    "Car (Uber, Ola, Taxi, etc.)", 
+    "2-Wheeler: scooter, motorbike (own)", 
+    "2-Wheeler (Rapido, Ola, etc.)", 
+    "Auto-rickshaw", 
+    "Employer-provided transportation", 
+    "Bus (Combined: MTC and TNSTC)", 
+    "Chennai Suburban Rail",
+    "MRTS", 
+    "Metro", 
+    "Shared auto/shared tempo"
+)
+
+# Calculate proportions for each mode by tier using svyby
+for(i in seq_along(mode_vars)) {
+    formula <- as.formula(paste0("~", mode_vars[i]))
+    props <- svyby(formula, ~tiers_final, design, svymean, na.rm = TRUE)
+    
+    # Convert to long format
+    props_long <- data.frame(
+        Mode = mode_labels[i],
+        Tier = props$tiers_final,
+        Proportion = props[[mode_vars[i]]] * 100
+    )
+    
+    modes_by_tier <- rbind(modes_by_tier, props_long)
+}
+
+# Reshape to wide format for display
+modes_wide <- modes_by_tier %>%
+    pivot_wider(names_from = Tier,
+                values_from = Proportion) %>%
+    arrange(desc(across(-Mode)))
+
+# Create formatted table
+kable(modes_wide,
+      caption = "Mode of Travel Distribution (%) by Employment Tier",
+      digits = 2,
+      padding = 40) %>%
+    kable_styling()
+
+```

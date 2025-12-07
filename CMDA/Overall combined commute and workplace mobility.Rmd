@@ -1,0 +1,362 @@
+---
+title: "Commute and workplace mobility overall"
+author: "Radhika Pande"
+date: "2025-01-10"
+output:   
+  html_document :
+    code_folding: hide
+---
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r data, include=FALSE}
+library(readxl)
+library(knitr)
+library(rmarkdown)
+library(dplyr)
+library(googledrive)
+library(tidyverse)
+library(openxlsx) 
+library(sf)
+library(stringr)
+library(survey)
+library(srvyr)
+library(knitr)
+library(kableExtra)
+library(htmltools)
+library(haven)
+data<-read.csv("D://cmda_final//workplace//Data//Workplace_Survey_Cleaned_for_NotApplicable.csv")
+```
+
+1. Overall commute patterns and distances:
+```{r overallcombinedcommute}
+commute_filtered <- data %>%
+  mutate(
+    commute_distance = case_when(
+      # Work from home category
+      comm_commute_days == 1 ~ "Work from home",
+      
+      # Fixed workplace location with distances
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & comm_work_dist == 6 ~ "Fixed location: 50 to 100 km",
+      comm_commute_location == 1 & comm_work_dist == 7 ~ "Fixed location: More than 100 km",
+      
+      # Multiple fixed locations with distances
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 6 ~ "Multiple locations: 50 to 100 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 7 ~ "Multiple locations: More than 100 km",
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      
+      # Don't know and don't want to disclose responses
+      comm_commute_location == -9998 | comm_work_dist == -9998 | comm_work_dist_mult == -9998 ~ "Do not know",
+      comm_commute_location == -9999 | comm_work_dist == -9999 | comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+      
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(commute_distance)) %>%
+  group_by(commute_distance) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(commute_distance, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km",
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed location: 50 to 100 km",
+    "Fixed location: More than 100 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple locations: 50 to 100 km",
+    "Multiple locations: More than 100 km",
+    "No fixed location, varies daily"
+  )))
+
+# Create the formatted kable table
+commute_filtered %>%
+  kbl(col.names = c("Commute Pattern", "Frequency", "Share (%)"),
+      caption = "Distribution of Commute Patterns and Distances",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+
+Overall commute distance by gender
+```{r overallcommutegender}
+overall_combined_gender<-data %>%
+  filter(!perinf_gender %in% c (-9999,-9998,-9997))%>% 
+  mutate( commute_distance = case_when(
+      # Work from home category
+      comm_commute_days == 1 ~ "Work from home",
+      
+      # Fixed workplace location with distances
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & comm_work_dist == 6 ~ "Fixed location: 50 to 100 km",
+      comm_commute_location == 1 & comm_work_dist == 7 ~ "Fixed location: More than 100 km",
+      
+      # Multiple fixed locations with distances
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 6 ~ "Multiple locations: 50 to 100 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 7 ~ "Multiple locations: More than 100 km",
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      
+      # Don't know and don't want to disclose responses
+      comm_commute_location == -9998 | comm_work_dist == -9998 | comm_work_dist_mult == -9998 ~ "Do not know",
+      comm_commute_location == -9999 | comm_work_dist == -9999 | comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+      
+      TRUE ~ NA_character_
+    )
+  ) %>%
+    filter(!is.na(commute_distance))%>%
+  group_by(perinf_gender, commute_distance) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate percentages within each gender
+  group_by(perinf_gender) %>%
+  mutate(share = round(100 * count/sum(count), 2)) %>%
+  select(-count) %>%
+  pivot_wider(
+    names_from = perinf_gender,
+    values_from = share,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_distance, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km",
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed location: 50 to 100 km",
+    "Fixed location: More than 100 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple locations: 50 to 100 km",
+    "Multiple locations: More than 100 km",
+    "No fixed location, varies daily"
+  )))
+# Create the formatted kable table
+overall_combined_gender %>%
+  kbl(col.names = c("Distance to work", "Female (%)", "Male (%)"),
+      caption = "Gender-wise Distribution of Overall Commute Distances",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+
+```
+
+Overall commute distance by industry types
+```{r overallcommuteindustry}
+data %>%
+  mutate(
+    commute_distance= case_when( # Work from home category
+      comm_commute_days == 1 ~ "Work from home",
+      
+      # Fixed workplace location with distances
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & comm_work_dist == 6 ~ "Fixed location: 50 to 100 km",
+      comm_commute_location == 1 & comm_work_dist == 7 ~ "Fixed location: More than 100 km",
+      
+      # Multiple fixed locations with distances
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 6 ~ "Multiple locations: 50 to 100 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 7 ~ "Multiple locations: More than 100 km",
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      
+      # Don't know and don't want to disclose responses
+      comm_commute_location == -9998 | comm_work_dist == -9998 | comm_work_dist_mult == -9998 ~ "Do not know",
+      comm_commute_location == -9999 | comm_work_dist == -9999 | comm_work_dist_mult == -9999 ~ "Do not want to disclose",
+      
+      TRUE ~ NA_character_
+    ),
+    industry = case_when(
+      perinf_ind == 1 ~ "Manufacturing",
+      perinf_ind == 2 ~ "Wholesale and retail trade",
+      perinf_ind == 3 ~ "Information and communication (media and IT)",
+      perinf_ind == 4 ~ "Construction",
+      perinf_ind == 5 ~ "Government sector",
+      perinf_ind == 6 ~ "Transportation and storage",
+      perinf_ind == 7 ~ "Accommodation and food services",
+      perinf_ind == 8 ~ "Domestic and household work",
+      perinf_ind == 9 ~ "Professional, scientific and technical activities",
+      perinf_ind == 10 ~ "Agriculture, forestry and fishing",
+      perinf_ind == 11 ~ "Health and education",
+      perinf_ind == 12 ~ "Arts and recreation",
+      perinf_ind == 13 ~ "Real Estate",
+      perinf_ind == 14 ~ "Finance and Insurance",
+      perinf_ind == 15 ~ "General Services",
+      perinf_ind == 16 ~ "Others",
+      perinf_ind == -9997 ~ "Others",
+      TRUE ~ NA_character_
+    )
+  ) %>%filter(
+    !is.na(commute_distance),
+    !is.na(industry)
+  ) %>%
+  group_by(commute_distance, industry) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(industry) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = commute_distance,
+    names_from = industry,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_distance, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km",
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed location: 50 to 100 km",
+    "Fixed location: More than 100 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple locations: 50 to 100 km",
+    "Multiple locations: More than 100 km",
+    "No fixed location, varies daily")))%>%
+  kbl(
+    caption = "Distribution of  Commute Distance by Industry Types(%)",
+    align = rep('r', 17),  # right-align all columns
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+
+```
+
+2. Overall commute time:
+```{r overallcommutetime}
+commute_filtered <- data %>%
+  mutate(
+    commute_time = case_when(
+      comm_commute_days == 1 ~ "Work from home",
+      comm_commute_location == 1 & comm_ow_time == 1 ~ "Fixed location: Less than 15 mins",
+      comm_commute_location == 1 & comm_ow_time == 2 ~ "Fixed location: 15 to 30 mins",
+      comm_commute_location == 1 & comm_ow_time == 3 ~ "Fixed location: 30 to 45 mins",
+      comm_commute_location == 1 & comm_ow_time == 4 ~ "Fixed location: 45 mins to 1 hour",
+      comm_commute_location == 1 & comm_ow_time == 5 ~ "Fixed location: 1 to 2 hours",
+      comm_commute_location == 1 & comm_ow_time == 6 ~ "Fixed location: More than 2 hours",
+
+      comm_commute_location == 2 & comm_time_mult == 1 ~ "Multiple locations: Less than 15 mins",
+      comm_commute_location == 2 & comm_time_mult == 2 ~ "Multiple locations: 15 to 30 mins",
+      comm_commute_location == 2 & comm_time_mult == 3 ~ "Multiple locations: 30 to 45 mins",
+      comm_commute_location == 2 & comm_time_mult == 4 ~ "Multiple locations: 45 mins to 1 hour",
+      comm_commute_location == 2 & comm_time_mult == 5 ~ "Multiple locations: 1 to 2 hours",
+      comm_commute_location == 2 & comm_time_mult == 6 ~ "Multiple locations: More than 2 hours",
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      
+      # Don't know and don't want to disclose responses
+      comm_commute_location == -9998 | comm_ow_time == -9998 | comm_time_mult == -9998 ~ "Do not know",
+      comm_commute_location == -9999 | comm_ow_time == -9999 | comm_time_mult == -9999 ~ "Do not want to disclose",
+      
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(commute_time)) %>%
+  group_by(commute_time) %>%
+  summarise(Freq = n()) %>%
+  mutate(
+    share = (Freq / sum(Freq)) * 100,
+    share = round(share, 2)
+  ) %>%
+  arrange(match(commute_time, c(
+    "Do not know",
+    "Do not want to disclose",
+    "Work from home",
+    "Fixed location: Less than 15 mins",
+    "Fixed location: 15 to 30 mins",
+    "Fixed location: 30 to 45 mins",
+    "Fixed location: 45 mins to 1 hour",
+    "Fixed location: 1 to 2 hours",
+    "Fixed location: More than 2 hours",
+
+    "Multiple locations: Less than 15 mins",
+    "Multiple locations: 15 to 30 mins",
+    "Multiple locations: 30 to 45 mins",
+    "Multiple locations: 45 mins to 1 hour",
+    "Multiple locations: 1 to 2 hours",
+    "Multiple locations: More than 2 hours",
+    "No fixed location, varies daily"
+  )))
+
+# Create the formatted kable table
+commute_filtered %>%
+  kbl(col.names = c("Commute Pattern", "Frequency", "Share (%)"),
+      caption = "Distribution of Commute Patterns and Time",
+      align = c("l", "r", "r"),
+      digits = 2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(2:3, width = "100px")
+```
+

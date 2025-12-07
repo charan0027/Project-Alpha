@@ -1,0 +1,1647 @@
+---
+title: "Mobility charts"
+author: "Radhika Pande"
+date: "2025-01-13"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r data, include=FALSE}
+library(readxl)
+library(knitr)
+library(rmarkdown)
+library(dplyr)
+library(googledrive)
+library(tidyverse)
+library(openxlsx) 
+library(sf)
+library(stringr)
+library(survey)
+library(srvyr)
+library(knitr)
+library(kableExtra)
+library(htmltools)
+library(haven)
+library(extrafont)
+library(showtext)
+
+# Add Arial to the font families
+font_add("Arial", regular = "arial.ttf")
+showtext_auto()
+
+# Specify Arial in the plot
+loadfonts(device = "win")  # For Windows
+wp <- read.csv("Data/Workplace_Survey_Cleaned_for_NotApplicable.csv") 
+df<- read.csv("Data/Workplace_Survey_Cleaned_for_NotApplicable.csv") 
+# cluster <- read_xlsx("cluster_geography.xlsx")
+
+cl <- read_xlsx("Data/WPSurveyLocations_Classified_EconomicClusters.xlsx")
+
+wp <- wp %>% left_join(cl %>% select(`Cluster number`, `Cluster name`, Type, Group), 
+                       by = c("final_clust_id" = "Cluster number"))
+
+
+factor_labels <- read.csv("Data/factor_labels_workplace.csv")
+setup_font <- function() {
+  # Add Arial font
+  font_add("Arial", regular = "arial.ttf")
+  showtext_auto()
+}
+customize_plot <- function(plot_obj, bar_width = 0.8, dodge_width = 0.9, 
+                           fill_colors = c("steelblue", "darkred")) {
+  plot_obj$layers <- lapply(plot_obj$layers, function(layer) {
+    if (inherits(layer$geom, "GeomBar")) {
+      # Modify bar width and dodge width
+      layer$aes_params$width <- bar_width
+      if (inherits(layer$position, "PositionDodge")) {
+        layer$position$width <- dodge_width
+      }
+    }
+    layer
+  })
+  
+  plot_obj
+  
+}
+
+apply_theme_blue <-  function(p, 
+                              x_var, 
+                              y_var,
+                              title = "Distribution of Values",
+                              x_label = "Categories",
+                              y_label = "Percentage (%)",
+                              bar_color = "#003BA3",
+                              bar_width = 0.7,
+                              wrap_width = 15) {  # New parameter for line breaks
+  
+  setup_font()
+  
+  x_var_sym <- sym(x_var)
+  y_var_sym <- sym(y_var)
+  
+  if (!is.null(wrap_width)) {
+    p <- p + scale_x_discrete(labels = function(x) str_wrap(x, width = wrap_width))
+  }
+  
+  p <- p +
+    geom_text(aes(label = !!y_var_sym),
+              vjust = -0.5,
+              family = "Arial",
+              size = 4.5) +
+    labs(title = title,
+         x = x_label,
+         y = y_label) +
+    theme_minimal() +
+    theme(
+      axis.title.x = element_text(
+        family = "Arial", size = 14, 
+        margin = margin(t = 10, b = 0)
+      ),
+      axis.title.y = element_text(
+        family = "Arial", size = 14, 
+        margin = margin(r = 10, l = 0)
+      ),
+      axis.text.x = element_text(
+        family = "Arial", size = 11, 
+        colour = "black", hjust = 0.5, 
+        margin = margin(t = 5),
+        angle = 0
+      ),
+      axis.text.y = element_text(
+        family = "Arial", size = 12, 
+        colour = "black", 
+        margin = margin(r = 5)
+      ),
+      plot.title = element_text(
+        family = "Arial", face = "bold", 
+        size = 22, hjust = 0.5, 
+        colour = "black", 
+        margin = margin(b = 10)
+      ),
+      panel.grid = element_line(color = "gray90"),
+      axis.line = element_line(color = "gray90", size = 0.5),
+    ) +
+    scale_y_continuous(
+      limits = function(x) c(0, max(x) * 1.15),
+      expand = c(0, 0)
+    )
+  
+  p$layers[[1]]$aes_params$fill <- bar_color
+  p$layers[[1]]$aes_params$width <- bar_width
+  
+  return(p)
+}
+apply_theme_blue_grouped <- function(p, x_var,
+                                     y_var,
+                                     group_var,
+                                     title = "Distribution by Groups",
+                                     x_label = "Categories",
+                                     y_label = "Percentage (%)",
+                                     group_label = "Groups",
+                                     color1 = I("#4A8CFF"),
+                                     color2 = I("#003BA3"),
+                                     wrap_width = 15) {
+  
+  setup_font()
+  
+  x_var_sym <- sym(x_var)
+  y_var_sym <- sym(y_var)
+  group_var_sym <- sym(group_var)
+  
+  if (!is.null(wrap_width)) {
+    p <- p + scale_x_discrete(labels = function(x) str_wrap(x, width = wrap_width))
+  }
+  
+  p <- p +
+    geom_text(aes(label = !!y_var_sym),
+              position = position_dodge(width = 0.99),
+              vjust = -0.5,
+              family = "Arial",
+              size = 4) +
+    labs(title = title,
+         x = x_label,
+         y = y_label,
+         fill = group_label) +
+    scale_fill_manual(values = c(color1, color2)) +
+    theme_minimal() +
+    theme(
+      axis.title.x = element_text(
+        family = "Arial", size = 14, 
+        margin = margin(t = 10, b = 0)
+      ),
+      axis.title.y = element_text(
+        family = "Arial", size = 14, 
+        margin = margin(r = 10, l = 0)
+      ),
+      axis.text.x = element_text(
+        family = "Arial", size = 11, 
+        colour = "black", hjust = 0.5, 
+        margin = margin(t = 5),
+        angle = 0
+      ),
+      axis.text.y = element_text(
+        family = "Arial", size = 11, 
+        colour = "black", 
+        margin = margin(r = 5)
+      ),
+      plot.title = element_text(
+        family = "Arial", face = "bold", 
+        size = 22, hjust = 0.5, 
+        colour = "black", 
+        margin = margin(b = 10)
+      ),
+      legend.title = element_text(
+        family = "Arial", size = 12
+      ),
+      legend.text = element_text(
+        family = "Arial", size = 11
+      ),
+      panel.grid = element_line(color = "gray90"),
+      axis.line = element_line(color = "gray90", size = 0.5)
+    ) +
+    scale_y_continuous(
+      limits = function(x) c(0, max(x) * 1.15),
+      expand = c(0, 0)
+    )
+  
+  p <- customize_plot(p, dodge_width = 0.95, bar_width = 0.9, 
+                      fill_colors = c(color1, color2))
+  
+  return(p)
+}
+```
+
+```{r Employment, include = FALSE}
+wp <- wp %>% mutate(Group_2 = ifelse(is.na(Group), Type, Group)) %>%
+     mutate(Group_2 = case_when(Group_2 == 
+                              "Large Industry, Warehouses and Ports" ~ 
+                              "Large and medium industry (including ports, warehousing)" , 
+                              Group_2 == "Small Industry" ~ 
+                              "Medium and Small industry"  , 
+                              #Group_2 == "Informal Manufacturing" ~ "Informal Manufacturing" , 
+                              Group_2 == "Mixed- Ambattur/Guindy" ~ 
+                              "Mixed (Ambattur/Guindy)"  ,  
+                              Group_2 == "Retail/Trade-Medium/Large" ~
+                              "Retail trade - Medium to Large"  , 
+                              Group_2 == "Retail/Trade-Small"~
+                              "Retail trade - Small"  , 
+                              Group_2 == "IT/Office" ~ "IT / Commercial Offices", 
+                              Group_2 =="Government workers" ~ "Government workers", 
+                              Group_2 == "Informal Service Sector" ~ 
+                                "Informal Services",
+                             #Group_2 == "Transport hub" ~ "Transport hub"
+                             TRUE ~ Group_2)) %>%
+                    mutate(Group_2 = 
+                    factor(Group_2, 
+                    levels = c("Large and medium industry (including ports, warehousing)", 
+                              "Medium and Small industry", 
+                              "Informal Manufacturing", 
+                              "Mixed (Ambattur/Guindy)", 
+                              "Retail trade - Medium to Large", 
+                              "Retail trade - Small", 
+                              "IT / Commercial Offices" , 
+                              "Government workers", 
+                              "Informal Services", 
+                              "Transport hub" )))
+
+
+gender <- wp %>% group_by(Group_2, perinf_gender) %>%
+  filter(!perinf_gender %in% c(-9997, -9998, -9999) & !is.na(Group_2)) %>%
+  summarise(cnt = n()) %>% 
+  ungroup() %>%
+  group_by(Group_2) %>%
+  summarise(Gender = ifelse(perinf_gender == 1, "Male", "Female"), 
+    percentage = round(100*cnt/sum(cnt), 2)) %>%
+   pivot_wider(names_from = Gender, values_from = percentage)
+
+wp %>% group_by(Group_2) %>%
+  filter(!is.na(Group_2)) %>%
+  summarise(cnt = n()) %>%
+  mutate(Overall = round(100*cnt/sum(cnt), 2)) %>% 
+  left_join(gender, by = "Group_2") %>%
+  kable(caption = "Distribution of each Group (%)") %>% 
+  kable_styling()
+
+  # employment type 
+
+wp %>% group_by(Group_2, perinf_emp_stat) %>%
+  summarise(cnt = n()) %>%
+  filter(!perinf_emp_stat %in% c(-9997, -9998, -9999, NA)) %>%
+  left_join(
+    factor_labels %>%
+      filter(variable == "perinf_emp_stat"),
+    by = c("perinf_emp_stat" = "level"))%>%
+  select(-perinf_emp_stat,-variable)%>%
+  pivot_wider(names_from = label, values_from = cnt) %>% 
+  kable(caption = "Employment status breakdown of each group (count)") %>%
+  kable_styling()
+
+wp %>% group_by(Group_2, perinf_emp_stat) %>%
+  summarise(cnt = n()) %>%
+  filter(!perinf_emp_stat %in% c(-9997, -9998, -9999, NA)) %>%
+  left_join(
+    factor_labels %>%
+      filter(variable == "perinf_emp_stat"),
+    by = c("perinf_emp_stat" = "level"))%>%
+  select(-perinf_emp_stat,-variable)%>%
+  ungroup() %>%
+  group_by(Group_2)%>%
+  summarise(label = label,
+            percentage = round(100*cnt/sum(cnt), 2)) %>% 
+  pivot_wider(names_from = label, values_from = percentage) %>% 
+  kable(caption = "Employment status breakdown of each group (%)") %>%
+  kable_styling()
+```
+
+1. Overall commute distance by cluster groups
+```{r overall commute}
+wp %>%
+  mutate(commute_distance = case_when(
+      # Work from home category
+      comm_commute_days == 1 ~ "Work from home",
+      
+      # Fixed workplace location with distances
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & (comm_work_dist == 6| comm_work_dist == 7) ~ "Fixed Location:More than 50 km", 
+       
+      # Multiple fixed locations with distances
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+       comm_commute_location == 2 & (comm_work_dist_mult == 6| comm_work_dist_mult == 7) ~ "Multiple Locations: More than 50 km", 
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(commute_distance),
+         !is.na(Group_2)) %>%
+  # First calculate the frequencies
+  group_by(Group_2, commute_distance) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Then calculate percentages within each Group_2
+  group_by(Group_2) %>%
+  mutate(percentage = round(100 * count / sum(count), 2)) %>%
+  ungroup() %>%
+  select(-count) %>%
+  # Pivot wider
+  pivot_wider(
+    id_cols = commute_distance,
+    names_from = Group_2,
+    values_from = percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_distance, c( "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km",
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed location: More than 50 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple locations: More than 50 km",
+    "No fixed location, varies daily"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Cluster Groups by Commute Distances (%)",
+    align = 'r',
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  row_spec(nrow(.) - 1, bold = TRUE, background = "#f2f2f2") %>%  # Highlight total row
+  scroll_box(width = "100%")
+```
+
+#Heatmap
+```{r heatmapcommutedistance}
+# Define cluster labels
+cluster_labels1 <- c("Large and medium industry (including ports, warehousing)"= "Large and\nmedium\nindustry",
+  "Medium and Small industry" = "Medium and\nsmall\nindustry",
+  "Informal Manufacturing" = "Informal\nManufacturing",
+  "Mixed (Ambattur/Guindy)" = "Mixed\n(Ambattur/\nGuindy)",
+  "Retail trade - Medium to Large" = "Retail\ntrade-\nMedium to Large",
+  "Retail trade - Small" = "Retail\ntrade-\nSmall",
+  "IT / Commercial Offices" = "IT /\nCommercial\nOffices",
+  "Government workers" = "Government\nworkers",
+  "Informal Services" = "Informal\nServices",
+  "Transport hub" = "Transport\nhub"
+)
+
+# Create heatmap data with explicit NA handling
+heatmap_data <- wp %>%
+  mutate(commute_distance = case_when(
+      comm_commute_days == 1 ~ "Work from home",
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & (comm_work_dist == 6 | comm_work_dist == 7) ~ "Fixed Location: More than 50 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+      comm_commute_location == 2 & (comm_work_dist_mult == 6 | comm_work_dist_mult == 7) ~ "Multiple Locations: More than 50 km",
+      comm_commute_location == 3 ~ "No fixed location, varies daily"
+    )
+  ) %>%
+  # Remove NA values explicitly
+  filter(!is.na(commute_distance), !is.na(Group_2)) %>%
+  # Calculate frequencies and percentages
+  group_by(Group_2, commute_distance) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(Group_2) %>%
+  mutate(percentage = round(100 * count / sum(count), 2)) %>%
+  ungroup()
+
+# Define distance order
+distance_order <- c(
+    "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km", 
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed Location: More than 50 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple Locations: More than 50 km",
+    "No fixed location, varies daily"
+)
+
+# Create enhanced heatmap
+ggplot(heatmap_data, 
+           aes(x = Group_2, 
+               y = factor(commute_distance, levels = rev(distance_order)),
+               fill = percentage)) +
+  geom_tile(color = "white", linewidth = 0.3) + # Add white borders to make tiles more distinct
+   
+  scale_fill_gradient(
+    low = "#DBE8FF",
+    high = "#114660",
+    limits = c(0, max(heatmap_data$percentage)),
+    breaks = seq(0, ceiling(max(heatmap_data$percentage)/10)*10, by = 10)
+  ) +
+  scale_x_discrete(labels = cluster_labels1) +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Arial"),
+    axis.text.x = element_text(
+      family = "Arial", size = 8,  # Adjust font size
+      colour = "black",
+      angle = 0,  # Labels are horizontal
+      hjust = 0.5,  # Center-align the labels
+      vjust = 1,    # Place the labels slightly below the tick
+      margin = margin(t = 5)  # Add margin for readability
+    ),
+    axis.text.y = element_text(
+      size = 10,
+      color = "black",
+      margin = margin(r = 5)
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      margin = margin(t = 20, b = 0)
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      margin = margin(r = 10, l = 0)
+    ),
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid = element_blank(),
+    plot.margin = margin(b = 20, l = 10, r = 10, t = 10)
+  ) +
+  labs(
+    x = "Cluster Groups",
+    y = "Commute Distances",
+    fill = "Percentage (%)",
+    title = "Commute Distances by Cluster Groups"
+  )
+
+# ggsave("C://Users//radhika.pande//Downloads//commutedistancecluster.svg", width = 12, height = 8, dpi = 300)
+
+```
+
+Commute distances by important locations
+```{r commuteimplocations}
+wp %>%
+  mutate(commute_distance = case_when(
+      # Work from home category
+      comm_commute_days == 1 ~ "Work from home",
+      
+      # Fixed workplace location with distances
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & (comm_work_dist == 6| comm_work_dist == 7) ~ "Fixed Location:More than 50 km", 
+       
+      # Multiple fixed locations with distances
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+       comm_commute_location == 2 & (comm_work_dist_mult == 6| comm_work_dist_mult == 7) ~ "Multiple Locations: More than 50 km", 
+      
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(commute_distance),
+         !is.na(imp_clusters_cmda)) %>%
+  # First calculate the frequencies
+  group_by(imp_clusters_cmda, commute_distance) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Then calculate percentages within each Group_2
+  group_by(imp_clusters_cmda) %>%
+  mutate(percentage = round(100 * count / sum(count), 2)) %>%
+  ungroup() %>%
+  select(-count) %>%
+  # Pivot wider
+  pivot_wider(
+    id_cols = commute_distance,
+    names_from = imp_clusters_cmda,
+    values_from = percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_distance, c( "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km",
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed location: More than 50 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple locations: More than 50 km",
+    "No fixed location, varies daily"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Important Locations by Commute Distances (%)",
+    align = 'r',
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  row_spec(nrow(.) - 1, bold = TRUE, background = "#f2f2f2") %>%  # Highlight total row
+  scroll_box(width = "100%")
+
+#Heatmap
+impcluster_labels1 <- c(
+  "Ambathur"= "Ambathur",
+  "ELCOT (near Sholinganallur)" = "ELCOT\n(near\nSholinganallur)",
+  "George Town" = "George Town",
+  "Guindy" = "Guindy",
+  "Gummidipoondi" = "Gummidipoondi",
+  "IT parks (Tidel & Ascendas)" = "IT parks\n(Tidel &\nAscendas)",
+  "Irrungattukottai" = "Irrungattukottai",
+  "Maraimalainagar" = "Maraimalainagar",
+  "Orgadam" = "Orgadam",
+  "Pondy Bazaar" = "Pondy\nBazaar",
+  "Sriperumbudur" = "Sriperumbudur",
+  "T Nagar" = "T Nagar",
+   "Wimco Nagar - Washermanpet" = "Wimco Nagar\nWashermanpet"
+)
+heatmap_data <- wp %>%
+  mutate(commute_distance = case_when(
+      comm_commute_days == 1 ~ "Work from home",
+      comm_commute_location == 1 & comm_work_dist == 1 ~ "Fixed location: Less than 5 km",
+      comm_commute_location == 1 & comm_work_dist == 2 ~ "Fixed location: 5 to 10 km",
+      comm_commute_location == 1 & comm_work_dist == 3 ~ "Fixed location: 10 to 15 km",
+      comm_commute_location == 1 & comm_work_dist == 4 ~ "Fixed location: 15 to 20 km",
+      comm_commute_location == 1 & comm_work_dist == 5 ~ "Fixed location: 20 to 50 km",
+      comm_commute_location == 1 & (comm_work_dist == 6 | comm_work_dist == 7) ~ "Fixed Location: More than 50 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 1 ~ "Multiple locations: Less than 5 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 2 ~ "Multiple locations: 5 to 10 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 3 ~ "Multiple locations: 10 to 15 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 4 ~ "Multiple locations: 15 to 20 km",
+      comm_commute_location == 2 & comm_work_dist_mult == 5 ~ "Multiple locations: 20 to 50 km",
+      comm_commute_location == 2 & (comm_work_dist_mult == 6 | comm_work_dist_mult == 7) ~ "Multiple Locations: More than 50 km",
+      comm_commute_location == 3 ~ "No fixed location, varies daily"
+    )
+  ) %>%
+  # Remove NA values explicitly
+  filter(!is.na(commute_distance), !is.na(imp_clusters_cmda)) %>%
+  # Calculate frequencies and percentages
+  group_by(imp_clusters_cmda, commute_distance) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(imp_clusters_cmda) %>%
+  mutate(percentage = round(100 * count / sum(count), 2)) %>%
+  ungroup()
+
+# Define distance order
+distance_order <- c(
+    "Work from home",
+    "Fixed location: Less than 5 km",
+    "Fixed location: 5 to 10 km", 
+    "Fixed location: 10 to 15 km",
+    "Fixed location: 15 to 20 km",
+    "Fixed location: 20 to 50 km",
+    "Fixed Location: More than 50 km",
+    "Multiple locations: Less than 5 km",
+    "Multiple locations: 5 to 10 km",
+    "Multiple locations: 10 to 15 km",
+    "Multiple locations: 15 to 20 km",
+    "Multiple locations: 20 to 50 km",
+    "Multiple Locations: More than 50 km",
+    "No fixed location, varies daily"
+)
+
+# Create enhanced heatmap
+ ggplot(heatmap_data, 
+           aes(x = imp_clusters_cmda, 
+               y = factor(commute_distance, levels = rev(distance_order)),
+               fill = percentage)) +
+  geom_tile(color = "white", linewidth = 0.3) + # Add white borders to make tiles more distinct
+   
+  scale_fill_gradient(
+    low = "#DBE8FF",
+    high = "#114660",
+    limits = c(0, max(heatmap_data$percentage)),
+    breaks = seq(0, ceiling(max(heatmap_data$percentage)/10)*10, by = 10)
+  ) +
+  scale_x_discrete(labels = impcluster_labels1) +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Arial"),
+    axis.text.x = element_text(
+      family = "Arial", size = 8,  # Adjust font size
+      colour = "black",
+      angle = 0,  # Labels are horizontal
+      hjust = 0.5,  # Center-align the labels
+      vjust = 1,    # Place the labels slightly below the tick
+      margin = margin(t = 5)  # Add margin for readability
+    ),
+    axis.text.y = element_text(
+      size = 11,
+      color = "black",
+      margin = margin(r = 5)
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      margin = margin(t = 20, b = 0)
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      margin = margin(r = 10, l = 0)
+    ),
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid = element_blank(),
+    plot.margin = margin(b = 20, l = 10, r = 10, t = 10)
+  ) +
+  labs(
+    x = "Important Locations",
+    y = "Commute Distances",
+    fill = "Percentage (%)",
+    title = "Commute Distances by Important Locations"
+  )
+ # ggsave("C://Users//radhika.pande//Downloads//commutedistanceimploc.svg", width = 15, height = 8, dpi = 300)
+
+```
+
+2. Commute time by cluster groups
+```{r commutetimecluster}
+wp %>%
+  mutate(commute_time = case_when(
+      comm_commute_days == 1 ~ "Work from home",
+      comm_commute_location == 1 & comm_ow_time == 1 ~ "Fixed location: Less than 15 mins",
+      comm_commute_location == 1 & comm_ow_time == 2 ~ "Fixed location: 15 to 30 mins",
+      comm_commute_location == 1 & comm_ow_time == 3 ~ "Fixed location: 30 to 45 mins",
+      comm_commute_location == 1 & comm_ow_time == 4 ~ "Fixed location: 45 mins to 1 hour",
+comm_commute_location == 1 & (comm_ow_time== 5| comm_ow_time  == 6) ~ "Fixed Location: More than 1 hour", 
+      comm_commute_location == 2 & comm_time_mult == 1 ~ "Multiple locations: Less than 15 mins",
+      comm_commute_location == 2 & comm_time_mult == 2 ~ "Multiple locations: 15 to 30 mins",
+      comm_commute_location == 2 & comm_time_mult == 3 ~ "Multiple locations: 30 to 45 mins",
+      comm_commute_location == 2 & comm_time_mult == 4 ~ "Multiple locations: 45 mins to 1 hour",
+      comm_commute_location == 2 & (comm_time_mult== 5| comm_time_mult  == 6) ~ "Multiple Locations: More than 1 hour", 
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+  )
+  ) %>%
+  filter(
+    !is.na(commute_time),
+    !is.na(Group_2)
+  )%>%
+  # First calculate the frequencies
+  group_by(Group_2, commute_time) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Then calculate percentages within each Group_2
+  group_by(Group_2) %>%
+  mutate(percentage = round(100 * count / sum(count), 2)) %>%
+  ungroup() %>%
+  select(-count) %>%
+  # Pivot wider
+  pivot_wider(
+    id_cols = commute_time,
+    names_from = Group_2,
+    values_from = percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_time, c("Work from home",
+    "Fixed location: Less than 15 mins",
+    "Fixed location: 15 to 30 mins",
+    "Fixed location: 30 to 45 mins",
+    "Fixed location: 45 mins to 1 hour",
+    "Fixed location: More than 1 hour",
+
+    "Multiple locations: Less than 15 mins",
+    "Multiple locations: 15 to 30 mins",
+    "Multiple locations: 30 to 45 mins",
+    "Multiple locations: 45 mins to 1 hour",
+    "Multiple locations: More than 1 hour",
+    "No fixed location, varies daily"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Cluster Groups by Commute Time (%)",
+    align = 'r',
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+#Heatmap for this
+```{r heatmapcommutetime}
+heatmap_data<- wp %>%
+  mutate(
+    commute_time = case_when(
+      comm_commute_days == 1 ~ "Work from home",
+      comm_commute_location == 1 & comm_ow_time == 1 ~ "Fixed location: Less than 15 mins",
+      comm_commute_location == 1 & comm_ow_time == 2 ~ "Fixed location: 15 to 30 mins",
+      comm_commute_location == 1 & comm_ow_time == 3 ~ "Fixed location: 30 to 45 mins",
+      comm_commute_location == 1 & comm_ow_time == 4 ~ "Fixed location: 45 mins to 1 hour",
+comm_commute_location == 1 & (comm_ow_time== 5| comm_ow_time  == 6) ~ "Fixed Location: More than 1 hour", 
+
+      comm_commute_location == 2 & comm_time_mult == 1 ~ "Multiple locations: Less than 15 mins",
+      comm_commute_location == 2 & comm_time_mult == 2 ~ "Multiple locations: 15 to 30 mins",
+      comm_commute_location == 2 & comm_time_mult == 3 ~ "Multiple locations: 30 to 45 mins",
+      comm_commute_location == 2 & comm_time_mult == 4 ~ "Multiple locations: 45 mins to 1 hour",
+      comm_commute_location == 2 & (comm_time_mult== 5| comm_time_mult  == 6) ~ "Multiple Locations: More than 1 hour", 
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily"
+  )
+  )  %>%
+  filter(!is.na(commute_time), !is.na(Group_2)) %>%
+  # Calculate frequencies and percentages
+  group_by(Group_2, commute_time) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(Group_2) %>%
+  mutate(percentage = round(100 * count / sum(count), 2)) %>%
+  ungroup()
+
+
+time_order <- c(
+    "Work from home",
+    "Fixed location: Less than 15 mins",
+    "Fixed location: 15 to 30 mins",
+    "Fixed location: 30 to 45 mins",
+    "Fixed location: 45 mins to 1 hour",
+    "Fixed Location: More than 1 hour",
+    "Multiple locations: Less than 15 mins",
+    "Multiple locations: 15 to 30 mins",
+    "Multiple locations: 30 to 45 mins",
+    "Multiple locations: 45 mins to 1 hour",
+    "Multiple Locations: More than 1 hour",
+    "No fixed location, varies daily"
+)
+
+# Create enhanced heatmap
+
+ggplot(heatmap_data%>%
+    filter(!is.na(commute_time), !is.na(Group_2)), 
+           aes(x = Group_2, 
+               y = factor(commute_time, levels = rev(time_order)),
+               fill = percentage)) +
+  geom_tile(color = "white", linewidth = 0.3) + # Add white borders to make tiles more distinct
+   
+  scale_fill_gradient(
+    low = "#DBE8FF",
+    high = "#114660",
+    limits = c(0, max(heatmap_data$percentage)),
+    breaks = seq(0, ceiling(max(heatmap_data$percentage)/10)*10, by = 10)
+  ) +
+  scale_x_discrete(labels = cluster_labels1) +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Arial"),
+    axis.text.x = element_text(
+      family = "Arial", size = 8,  # Adjust font size
+      colour = "black",
+      angle = 0,  # Labels are horizontal
+      hjust = 0.5,  # Center-align the labels
+      vjust = 1,    # Place the labels slightly below the tick
+      margin = margin(t = 5)
+    ),
+    axis.text.y = element_text(
+      size = 11,
+      color = "black",
+      margin = margin(r = 5)
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      margin = margin(t = 20, b = 0)
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      margin = margin(r = 10, l = 0)
+    ),
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid = element_blank(),
+    plot.margin = margin(b = 20, l = 10, r = 10, t = 10)
+  ) +
+  labs(
+    x = "Cluster Groups",
+    y = "Commute Times",
+    fill = "Percentage (%)",
+    title = "Commute Times by Cluster Groups"
+  )
+ # ggsave("C://Users//radhika.pande//Downloads//commutetimecluster.svg", width = 12, height = 8, dpi = 300)
+```
+
+Commute times by important locations
+```{r commuteimploc}
+wp %>%
+  mutate(commute_time = case_when(
+      comm_commute_days == 1 ~ "Work from home",
+      comm_commute_location == 1 & comm_ow_time == 1 ~ "Fixed location: Less than 15 mins",
+      comm_commute_location == 1 & comm_ow_time == 2 ~ "Fixed location: 15 to 30 mins",
+      comm_commute_location == 1 & comm_ow_time == 3 ~ "Fixed location: 30 to 45 mins",
+      comm_commute_location == 1 & comm_ow_time == 4 ~ "Fixed location: 45 mins to 1 hour",
+comm_commute_location == 1 & (comm_ow_time== 5| comm_ow_time  == 6) ~ "Fixed Location: More than 1 hour", 
+      comm_commute_location == 2 & comm_time_mult == 1 ~ "Multiple locations: Less than 15 mins",
+      comm_commute_location == 2 & comm_time_mult == 2 ~ "Multiple locations: 15 to 30 mins",
+      comm_commute_location == 2 & comm_time_mult == 3 ~ "Multiple locations: 30 to 45 mins",
+      comm_commute_location == 2 & comm_time_mult == 4 ~ "Multiple locations: 45 mins to 1 hour",
+      comm_commute_location == 2 & (comm_time_mult== 5| comm_time_mult  == 6) ~ "Multiple Locations: More than 1 hour", 
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily",
+  )
+  ) %>%
+  filter(
+    !is.na(commute_time),
+    !is.na(imp_clusters_cmda)
+  )%>%
+  # First calculate the frequencies
+  group_by(imp_clusters_cmda, commute_time) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Then calculate percentages within each Group_2
+  group_by(imp_clusters_cmda) %>%
+  mutate(percentage = round(100 * count / sum(count), 2)) %>%
+  ungroup() %>%
+  select(-count) %>%
+  # Pivot wider
+  pivot_wider(
+    id_cols = commute_time,
+    names_from = imp_clusters_cmda,
+    values_from = percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(commute_time, c("Work from home",
+    "Fixed location: Less than 15 mins",
+    "Fixed location: 15 to 30 mins",
+    "Fixed location: 30 to 45 mins",
+    "Fixed location: 45 mins to 1 hour",
+    "Fixed location: More than 1 hour",
+
+    "Multiple locations: Less than 15 mins",
+    "Multiple locations: 15 to 30 mins",
+    "Multiple locations: 30 to 45 mins",
+    "Multiple locations: 45 mins to 1 hour",
+    "Multiple locations: More than 1 hour",
+    "No fixed location, varies daily"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Important Locations by Commute Time (%)",
+    align = 'r',
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+
+#Heatmap for this
+```{r heatmapcommutetimeimploc}
+
+
+heatmap_data<- wp %>%
+  mutate(
+    commute_time = case_when(
+      comm_commute_days == 1 ~ "Work from home",
+      comm_commute_location == 1 & comm_ow_time == 1 ~ "Fixed location: Less than 15 mins",
+      comm_commute_location == 1 & comm_ow_time == 2 ~ "Fixed location: 15 to 30 mins",
+      comm_commute_location == 1 & comm_ow_time == 3 ~ "Fixed location: 30 to 45 mins",
+      comm_commute_location == 1 & comm_ow_time == 4 ~ "Fixed location: 45 mins to 1 hour",
+comm_commute_location == 1 & (comm_ow_time== 5| comm_ow_time  == 6) ~ "Fixed Location: More than 1 hour", 
+
+      comm_commute_location == 2 & comm_time_mult == 1 ~ "Multiple locations: Less than 15 mins",
+      comm_commute_location == 2 & comm_time_mult == 2 ~ "Multiple locations: 15 to 30 mins",
+      comm_commute_location == 2 & comm_time_mult == 3 ~ "Multiple locations: 30 to 45 mins",
+      comm_commute_location == 2 & comm_time_mult == 4 ~ "Multiple locations: 45 mins to 1 hour",
+      comm_commute_location == 2 & (comm_time_mult== 5| comm_time_mult  == 6) ~ "Multiple Locations: More than 1 hour", 
+      # No fixed location
+      comm_commute_location == 3 ~ "No fixed location, varies daily"
+  )
+  )  %>%
+  filter(!is.na(commute_time), !is.na(imp_clusters_cmda)) %>%
+  # Calculate frequencies and percentages
+  group_by(imp_clusters_cmda, commute_time) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(imp_clusters_cmda) %>%
+  mutate(percentage = round(100 * count / sum(count), 2)) %>%
+  ungroup()
+time_order <- c(
+    "Work from home",
+    "Fixed location: Less than 15 mins",
+    "Fixed location: 15 to 30 mins",
+    "Fixed location: 30 to 45 mins",
+    "Fixed location: 45 mins to 1 hour",
+    "Fixed Location: More than 1 hour",
+    "Multiple locations: Less than 15 mins",
+    "Multiple locations: 15 to 30 mins",
+    "Multiple locations: 30 to 45 mins",
+    "Multiple locations: 45 mins to 1 hour",
+    "Multiple Locations: More than 1 hour",
+    "No fixed location, varies daily"
+)
+
+# Create enhanced heatmap
+ ggplot(heatmap_data%>%
+    filter(!is.na(commute_time), !is.na(imp_clusters_cmda)), 
+           aes(x = imp_clusters_cmda, 
+               y = factor(commute_time, levels = rev(time_order)),
+               fill = percentage)) +
+  geom_tile(color = "white", linewidth = 0.3) + # Add white borders to make tiles more distinct
+   
+  scale_fill_gradient(
+    low = "#DBE8FF",
+    high = "#114660",
+    limits = c(0, max(heatmap_data$percentage)),
+    breaks = seq(0, ceiling(max(heatmap_data$percentage)/10)*10, by = 10)
+  ) +
+  scale_x_discrete(labels = impcluster_labels1) +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Arial"),
+    axis.text.x = element_text(
+      family = "Arial", size = 8,  # Adjust font size
+      colour = "black",
+      angle = 0,  # Labels are horizontal
+      hjust = 0.5,  # Center-align the labels
+      vjust = 1,    # Place the labels slightly below the tick
+      margin = margin(t = 5)
+    ),
+    axis.text.y = element_text(
+      size = 11,
+      color = "black",
+      margin = margin(r = 5)
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      margin = margin(t = 20, b = 0)
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      margin = margin(r = 10, l = 0)
+    ),
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid = element_blank(),
+    plot.margin = margin(b = 20, l = 10, r = 10, t = 10)
+  ) +
+  labs(
+    x = "Important Locations",
+    y = "Commute Times",
+    fill = "Percentage (%)",
+    title = "Commute Times by Important Locations"
+  )
+# ggsave("C://Users//radhika.pande//Downloads//commutetimeimploc.svg", width = 15, height = 8, dpi = 300)
+
+```
+
+3. Commute cost by cluster groups
+```{r commutecostcluster}
+wp %>%
+  mutate(work_comm_travel_cost=case_when(
+    comm_travel_cost == -9998 ~ "Do not know",
+    comm_travel_cost  == -9999 ~ "Do not want to disclose",
+    comm_travel_cost  == 1 ~ "No expenses (work from home/commute by walk/cycle)",
+    comm_travel_cost  == 2 ~ "INR 25 or less",
+    comm_travel_cost  == 3 ~ "INR 26-50",
+    comm_travel_cost  == 4 ~ "INR 51-100",
+    comm_travel_cost  == 5 ~ "INR 101-150",
+    comm_travel_cost  == 6 ~ "INR 151-300",
+    comm_travel_cost  == 7 ~ "INR 301-500",
+    comm_travel_cost  == 8 ~ "More than 500",
+    TRUE ~ NA
+  )
+  ) %>%
+  filter(
+    !is.na(work_comm_travel_cost),
+    !is.na(Group_2)
+  ) %>%
+  group_by(work_comm_travel_cost, Group_2) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(Group_2) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_comm_travel_cost,
+    names_from = Group_2,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_travel_cost, c(
+    "Do not know",
+    "Do not want to disclose",
+    "No expenses (work from home/commute by walk/cycle)",
+    "INR 25 or less",
+    "INR 26-50",
+    "INR 51-100",
+    "INR 101-150",
+    "INR 151-300",
+    "INR 301-500",
+    "More than 500"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Cluster Groups by Travel Cost(%)",
+    align = 'r',
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+```
+
+#Heatmap for this
+```{r heatmapcostcommute}
+heatmap_data<-wp %>%
+  mutate(work_comm_travel_cost=case_when(
+    comm_travel_cost  == 1 ~ "No expenses",
+    comm_travel_cost  == 2 ~ "INR 25 or less",
+    comm_travel_cost  == 3 ~ "INR 26-50",
+    comm_travel_cost  == 4 ~ "INR 51-100",
+    comm_travel_cost  == 5 ~ "INR 101-150",
+    comm_travel_cost  == 6 ~ "INR 151-300",
+    comm_travel_cost  == 7 ~ "INR 301-500",
+    comm_travel_cost  == 8 ~ "More than 500",
+    TRUE ~ NA
+  )
+  ) %>%
+  filter(
+    !is.na(work_comm_travel_cost),
+    !is.na(Group_2)
+  ) %>%
+  group_by(work_comm_travel_cost, Group_2) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(Group_2) %>%
+  mutate(
+    Percentage = round(100 * Freq / sum(Freq), 2)  # Changed 'count' to 'Freq'
+  ) %>%
+  ungroup()
+cost_order <- c(
+    "No expenses",
+    "INR 25 or less",
+    "INR 26-50",
+    "INR 51-100",
+    "INR 101-150",
+    "INR 151-300",
+    "INR 301-500",
+    "More than 500"
+    
+)
+
+# Create enhanced heatmap
+ggplot(heatmap_data%>%
+    filter(!is.na(work_comm_travel_cost), !is.na(Group_2)), 
+           aes(x = Group_2, 
+               y = factor(work_comm_travel_cost, levels = rev(cost_order)),
+               fill = Percentage)) +
+  geom_tile(color = "white", linewidth = 0.3) + # Add white borders to make tiles more distinct
+   
+  scale_fill_gradient(
+    low = "#DBE8FF",
+    high = "#114660",
+    limits = c(0, max(heatmap_data$Percentage)),
+    breaks = seq(0, ceiling(max(heatmap_data$Percentage)/10)*10, by = 10)
+  ) +
+  scale_x_discrete(labels = cluster_labels1) +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Arial"),
+    axis.text.x = element_text(
+      family = "Arial", size = 8,  # Adjust font size
+      colour = "black",
+      angle = 0,  # Labels are horizontal
+      hjust = 0.5,  # Center-align the labels
+      vjust = 1,    # Place the labels slightly below the tick
+      margin = margin(t = 5)
+    ),
+    axis.text.y = element_text(
+      size = 11,
+      color = "black",
+      margin = margin(r = 5)
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      margin = margin(t = 20, b = 0)
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      margin = margin(r = 10, l = 0)
+    ),
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid = element_blank(),
+    plot.margin = margin(b = 20, l = 10, r = 10, t = 10)
+  ) +
+  labs(
+    x = "Cluster Groups",
+    y = "Commute Cost",
+    fill = "Percentage (%)",
+    title = "Commute Costs by Cluster Groups"
+  )
+# ggsave("C://Users//radhika.pande//Downloads//commutecostcluster.svg", width = 12, height = 8, dpi = 300)
+```
+
+#Commute cost by important locations
+```{r commutecostimploc}
+wp %>%
+  mutate(work_comm_travel_cost=case_when(
+    comm_travel_cost  == 1 ~ "No expenses",
+    comm_travel_cost  == 2 ~ "INR 25 or less",
+    comm_travel_cost  == 3 ~ "INR 26-50",
+    comm_travel_cost  == 4 ~ "INR 51-100",
+    comm_travel_cost  == 5 ~ "INR 101-150",
+    comm_travel_cost  == 6 ~ "INR 151-300",
+    comm_travel_cost  == 7 ~ "INR 301-500",
+    comm_travel_cost  == 8 ~ "More than 500",
+    TRUE ~ NA
+  )
+  ) %>%
+  filter(
+    !is.na(work_comm_travel_cost),
+    !is.na(imp_clusters_cmda)
+  ) %>%
+  group_by(work_comm_travel_cost, imp_clusters_cmda) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(imp_clusters_cmda) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    id_cols = work_comm_travel_cost,
+    names_from = imp_clusters_cmda,
+    values_from = Percentage,
+    values_fill = 0
+  ) %>%
+  arrange(match(work_comm_travel_cost, c(
+    "No expenses (work from home/commute by walk/cycle)",
+    "INR 25 or less",
+    "INR 26-50",
+    "INR 51-100",
+    "INR 101-150",
+    "INR 151-300",
+    "INR 301-500",
+    "More than 500"
+  ))) %>%
+  kbl(
+    caption = "Distribution of Cluster Groups by Travel Cost(%)",
+    align = 'r',
+    digits = 2
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover"),
+    full_width = TRUE,
+    font_size = 12
+  ) %>%
+  row_spec(0, bold = TRUE) %>%
+  scroll_box(width = "100%")
+
+#Heatmap
+heatmap_data<- wp %>%
+  mutate(work_comm_travel_cost=case_when(
+    comm_travel_cost  == 1 ~ "No expenses",
+    comm_travel_cost  == 2 ~ "INR 25 or less",
+    comm_travel_cost  == 3 ~ "INR 26-50",
+    comm_travel_cost  == 4 ~ "INR 51-100",
+    comm_travel_cost  == 5 ~ "INR 101-150",
+    comm_travel_cost  == 6 ~ "INR 151-300",
+    comm_travel_cost  == 7 ~ "INR 301-500",
+    comm_travel_cost  == 8 ~ "More than 500",
+    TRUE ~ NA
+  )
+  ) %>%
+  filter(
+    !is.na(work_comm_travel_cost),
+    !is.na(imp_clusters_cmda)
+  ) %>%
+  group_by(work_comm_travel_cost, imp_clusters_cmda) %>%
+  summarise(Freq = n(), .groups = 'drop') %>%
+  group_by(imp_clusters_cmda) %>%
+  mutate(
+    Percentage = round(Freq / sum(Freq) * 100, 2)
+  ) %>%
+  ungroup()
+
+ ggplot(heatmap_data%>%
+    filter(!is.na(work_comm_travel_cost), !is.na(imp_clusters_cmda)), 
+           aes(x = imp_clusters_cmda, 
+               y = factor(work_comm_travel_cost, levels = rev(cost_order)),
+               fill = Percentage)) +
+  geom_tile(color = "white", linewidth = 0.3) + # Add white borders to make tiles more distinct
+   
+  scale_fill_gradient(
+    low = "#DBE8FF",
+    high = "#114660",
+    limits = c(0, max(heatmap_data$Percentage)),
+    breaks = seq(0, ceiling(max(heatmap_data$Percentage)/10)*10, by = 10)
+  ) +
+  scale_x_discrete(labels = impcluster_labels1) +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Arial"),
+    axis.text.x = element_text(
+      family = "Arial", size = 8,  # Adjust font size
+      colour = "black",
+      angle = 0,  # Labels are horizontal
+      hjust = 0.5,  # Center-align the labels
+      vjust = 1,    # Place the labels slightly below the tick
+      margin = margin(t = 5)
+    ),
+    axis.text.y = element_text(
+      size = 11,
+      color = "black",
+      margin = margin(r = 5)
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      margin = margin(t = 20, b = 0)
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      margin = margin(r = 10, l = 0)
+    ),
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid = element_blank(),
+    plot.margin = margin(b = 20, l = 10, r = 10, t = 10)
+  ) +
+  labs(
+    x = "Cluster Groups",
+    y = "Important Locations",
+    fill = "Percentage (%)",
+    title = "Commute Costs by Important Locations"
+  )
+# ggsave("C://Users//radhika.pande//Downloads//commutecostimploc.svg", width = 15, height = 8, dpi = 300)
+```
+
+#Commute mode by cluster groups
+```{r modecluster}
+#Normal method
+# Ensure comm_mode_travel is a character variable
+wp$comm_mode_travel <- as.character(wp$comm_mode_travel)
+
+
+# Define a condition for replacement of commute modes
+replacement_condition <- function(x) {
+  case_when(
+    x %in% c("9","10","11","12","14") ~ "bus_trains",
+    x %in% c("13") ~ "metro",
+    x %in% c("5","6") ~ "two_wheelers",
+    x %in% c("3","4") ~ "cars",
+    x %in% c("7") ~ "auto_rick",
+    x %in% c("2") ~ "bicycle",
+    x %in% c("8") ~ "emp_prov",
+    x %in% c("1") ~ "walk",
+  TRUE ~ NA_character_ # Default fallback
+  )
+  }
+
+#making comute modes variable into list
+wp <- wp%>%
+  mutate(mode_list = str_split(comm_mode_travel, " "))
+
+#applying replacement function          
+wp$mode_combinations <- 
+  lapply(wp$mode_list, function(lst) {
+    unname(sapply(lst, replacement_condition))
+  })
+
+#filter out 'None' from mode of travel
+wp <- wp%>%
+  filter(!is.na(mode_combinations))
+
+wp$mode_combinations_dedup <- lapply(wp$mode_combinations,function(x) sort(unique(x)))
+wp$mode_list <- lapply(wp$mode_list,function(x) sort(unique(x)))
+
+
+
+# Remove "walk" if the list is longer than 1
+wp$mode_combinations_dedup <- lapply(wp$mode_combinations_dedup, function(lst) {
+  if (length(lst) > 1) {
+    lst[lst != "walk"] # Drop "walk" from the list
+  } else {
+    lst # Keep as is
+  }
+})
+
+
+# Calculate proportions of comm_mode_travel
+mode_travel_prop_df <- wp%>%
+  group_by(as.character(mode_combinations_dedup))%>%
+  summarise(count = n())%>%
+  mutate(percentage = round(count/15418*100,2))%>%
+  arrange(desc(count))%>%
+  ungroup()%>%
+  mutate(row_num = row_number())
+  
+
+
+
+mode_travel_prop_df <- mode_travel_prop_df%>%
+  rename(mode_combinations = "as.character(mode_combinations_dedup)")%>%
+  mutate(mode_combinations_2 = case_when(
+    row_num <= 10 ~ mode_combinations,
+    .default = "others"
+  ))
+
+
+##combining 'others'
+public_transport_list <- c("walk","bus_trains","metro")
+private_transport_list <- c("bicycle","cars","two_wheelers","auto_rick","emp_prov")
+
+# Subsetting the 'Others' combinations
+filtered_rows <- mode_travel_prop_df[mode_travel_prop_df$mode_combinations_2 == "others", ]
+# filtered_rows$mode_combinations <- as.list
+
+filtered_rows$mode_combinations <- lapply(filtered_rows$mode_combinations, function(x) {
+  if (grepl("^c\\(", x)) {
+    eval(parse(text = x))  # Parse strings like "c(\"auto_rick\", \"bus_trains\")"
+  } else {
+    x  # Leave single elements unchanged
+  }
+})
+
+# Row-wise processing
+filtered_rows <- filtered_rows %>%
+  rowwise() %>%  # Perform row-wise operations
+  mutate(
+    other_new = case_when(
+      all(unlist(mode_combinations) %in% public_transport_list) ~ "public transport",  # All public transport
+      all(unlist(mode_combinations) %in% private_transport_list) ~ "private transport",
+      any(unlist(mode_combinations) %in% public_transport_list) & 
+        any(unlist(mode_combinations) %in% private_transport_list) ~ "public + private transport",  # Mixed transport
+      TRUE ~ "other"  # Default to "Others" if neither condition is met
+    )
+  ) %>%
+  ungroup()  # Remove rowwise grouping
+
+
+
+#summing the percentagrs across clusters for 'others'
+# Define a function to filter, calculate column sums, and add labels
+get_col_sums <- function(data, filter_condition, label) {
+  filtered <- data[data$other_new == filter_condition, ]
+  col_sums <- colSums(filtered[, sapply(filtered, is.numeric)], na.rm = TRUE)
+  c(label, col_sums, "col_sum", "col_sum")
+}
+
+# Apply the function for each condition
+col_sums_private <- get_col_sums(filtered_rows, "private transport", "other private transport mixes")
+col_sums_pt <- get_col_sums(filtered_rows, "public transport", "other public transport mixes")
+col_sums_ppm <- get_col_sums(filtered_rows, "public + private transport", "other public + private transport mixes")
+
+
+# Create final simplified table
+mode_travel_prop_df_2 <- mode_travel_prop_df %>%
+  filter(mode_combinations_2 != "others",
+         !is.na(mode_combinations_2)) %>%
+  rbind(col_sums_private, col_sums_pt, col_sums_ppm) %>%
+  mutate(mode_combinations_2 = case_when(
+    mode_combinations_2 == "col_sum_private" ~ "private",
+    mode_combinations_2 == "col_sum_ppm" ~ "other public+private transport combinations",
+    mode_combinations_2 == "col_sum_pt" ~ "other public transport combinations",
+    TRUE ~ mode_combinations_2
+  ))%>%
+  select(-row_num,-mode_combinations_2)
+
+
+kable(mode_travel_prop_df_2, caption = "Mode of travel for work") %>%
+  kable_styling(bootstrap_options = "bordered", full_width = FALSE) %>%
+  collapse_rows(columns = 1, valign = "middle") %>%
+  row_spec(row = 0, bold = TRUE)
+
+```
+```{r}
+# Create the cross tabulation with percentages
+# Calculate proportions of comm_mode_travel
+mode_crosstab <- wp%>%
+  group_by(mode_combinations_dedup,Group_2)%>%
+  summarise(count = n())%>%
+  rename(mode_combinations = mode_combinations_dedup)%>%
+  arrange(desc(count))%>%
+  ungroup()
+
+
+
+# Create a nicely formatted table with kable
+mode_cluster_table <- mode_crosstab %>%
+  # Pivot wider to get clusters as columns
+  pivot_wider(
+    id_cols = mode_combinations,
+    names_from = Group_2,
+    values_from = count
+  )%>%
+  arrange(desc(`Transport hub`))
+
+#converting to percentage
+col_sums_cross <- colSums(mode_cluster_table[,sapply(mode_cluster_table,is.numeric)],na.rm= TRUE)
+mode_cluster_table_perc <- round(sweep(mode_cluster_table[,sapply(mode_cluster_table,is.numeric)]
+                            ,2,col_sums_cross,FUN = "/")*100,2)
+
+mode_cluster_table_perc <- cbind(mode_cluster_table[,1],mode_cluster_table_perc)%>%
+  arrange(desc(`NA`))%>%
+  mutate(row_num = row_number())
+
+#marking others
+mode_cluster_table_perc <- mode_cluster_table_perc %>%
+  mutate(
+    mode_combinations_2 = case_when(
+      row_num <= 10 ~ sapply(mode_combinations, paste, collapse = ", "),
+      TRUE ~ "others"
+    )
+  )
+
+```
+```{r}
+
+# Subsetting the 'Others' combinations
+filtered_rows <- mode_cluster_table_perc%>%
+  filter(mode_combinations_2 == "others")
+
+# Row-wise processing
+filtered_rows <- filtered_rows %>%
+  rowwise() %>%  # Perform row-wise operations
+  mutate(
+    other_new = case_when(
+      all(unlist(mode_combinations) %in% public_transport_list) ~ "public transport",  # All public transport
+      all(unlist(mode_combinations) %in% private_transport_list) ~ "private transport",
+      any(unlist(mode_combinations) %in% public_transport_list) & 
+        any(unlist(mode_combinations) %in% private_transport_list) ~ "public + private transport",  # Mixed transport
+      TRUE ~ "other"  # Default to "Others" if neither condition is met
+    )
+  ) %>%
+  ungroup()  # Remove rowwise grouping
+
+#summing the percentagrs across clusters for 'others'
+# Define a function to filter, calculate column sums, and add labels
+get_col_sums <- function(data, filter_condition, label) {
+  filtered <- data[data$other_new == filter_condition, ]
+  col_sums <- colSums(filtered[, sapply(filtered, is.numeric)], na.rm = TRUE)
+  c(label, col_sums, label,label)
+}
+
+# Apply the function for each condition
+col_sums_private <- get_col_sums(filtered_rows, "private transport", "other private transport mixes")
+col_sums_pt <- get_col_sums(filtered_rows, "public transport", "other public transport mixes")
+col_sums_ppm <- get_col_sums(filtered_rows, "public + private transport", "other public + private transport mixes")
+
+# Create final simplified table
+mode_cluster_table_perc <- mode_cluster_table_perc %>%
+  filter(mode_combinations_2 != "others",
+         !is.na(mode_combinations_2)) %>%
+  rbind(col_sums_private, col_sums_pt, col_sums_ppm)%>%
+  select(-row_num)
+
+#Create the final formatted table
+kable(mode_cluster_table_perc,
+      caption = "Mode of Travel by Cluster Groups",
+      format.args = list(big.mark = ",")) %>%
+  kable_styling(bootstrap_options = "bordered", full_width = FALSE) %>%
+  collapse_rows(columns = 1, valign = "middle") %>%
+  row_spec(row = 0, bold = TRUE)
+```
+
+
+#Heatmap for modes
+```{r modesheatmapcommute}
+mode_order<- c(                           
+ "two_wheelers",
+ "auto_rick" ,
+ "cars",
+ "emp_prov",
+ "bicycle",
+ "cars,two_wheelers",
+ "other private transport mixes",
+ "walk" ,
+ "bus_trains",                      
+ "other public transport mixes" ,
+ "bus_trains,two_wheelers",
+ "auto_rick,bus_trains",
+ "other public+private transport combinations")
+
+mode_cluster_table_perc$mode_combinations <- as.character(mode_cluster_table_perc$mode_combinations)
+
+mode_cluster_table_perc <- mode_cluster_table_perc%>%
+  select(-mode_combinations)%>%
+  rename(NotAvailable = "NA")
+
+# Prepare the data for the heatmap
+mode_heatmap_data <- mode_cluster_table_perc %>%
+  pivot_longer(
+    cols = -mode_combinations_2,
+    names_to = "Group_2",
+    values_to = "percentage"
+  )%>%
+  # Convert percentage to numeric, removing any % signs if present
+  mutate(percentage = as.numeric(gsub("%", "", percentage)))
+
+# Create the heatmap
+ggplot(mode_heatmap_data %>%
+    filter(!is.na(mode_combinations_2), !is.na(Group_2)), 
+           aes(x = Group_2, 
+           y = factor(mode_combinations_2, levels = rev(mode_order)), # Reverse the order for bottom-to-top reading
+           fill = percentage)) +
+  geom_tile(color = "white", linewidth = 0.3) +
+  scale_fill_gradient(
+    low = "#DBE8FF",
+    high = "#114660",
+    limits = c(0, max(mode_heatmap_data$percentage, na.rm = TRUE)),
+    breaks = seq(0, ceiling(max(mode_heatmap_data$percentage, na.rm = TRUE)/10)*10, by = 10)
+  ) +
+  scale_x_discrete(labels = cluster_labels1) + 
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Arial"),
+    axis.text.x = element_text(
+      family = "Arial", size = 8,  # Adjust font size
+      colour = "black",
+      angle = 0,  # Labels are horizontal
+      hjust = 0.5,  # Center-align the labels
+      vjust = 1,    # Place the labels slightly below the tick
+      margin = margin(t = 5)
+    ),
+    axis.text.y = element_text(
+      size = 10,
+      color = "black",
+      margin = margin(r = 5)
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      margin = margin(t = 20, b = 0)
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      margin = margin(r = 10, l = 0)
+    ),
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid = element_blank(),
+    plot.margin = margin(b = 20, l = 10, r = 10, t = 10)
+  ) +
+  labs(
+    x = "Cluster Groups",
+    y = "Mode of Travel",
+    fill = "Percentage (%)",
+    title = "Mode of Travel by Cluster Groups"
+  )
+
+
+
+```
