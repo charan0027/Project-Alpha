@@ -1,17 +1,17 @@
-/* style.css - Ultra-Minimalist Design with Tiny Photo */
+//* Minimal portfolio layout with sidebar photo */
 
 :root {
-  --bg: #ffffff;             
-  --fg: #222222;             
-  --accent: #007ACC;         /* Clean blue accent */
-  --accent-soft: #f0f8ff;    
-  --muted: #6a6a6a;          
-  --border: #eeeeee;         
-  --sidebar-width: 280px;    
-  --font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+  --bg: #ffffff;
+  --fg: #222222;
+  --accent: #007ACC;
+  --accent-soft: #f0f8ff;
+  --muted: #6a6a6a;
+  --border: #eeeeee;
+  --sidebar-width: 280px;
+  --font-body: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-/* Reset and Body */
+/* Reset */
 * {
   margin: 0;
   padding: 0;
@@ -32,30 +32,28 @@ body {
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
-  padding: 40px 30px; 
+  padding: 40px 30px;
   border-right: 1px solid var(--border);
-  background: #fcfcfc; 
+  background: #fcfcfc;
   overflow-y: auto;
 }
 
 .content {
   margin-left: var(--sidebar-width);
-  padding: 50px 40px 60px; 
-  max-width: 800px; 
+  padding: 50px 40px 60px;
+  max-width: 800px;
 }
 
-
-/* Sidebar */
+/* Sidebar content */
 .sidebar-header {
-  text-align: left; 
-  padding: 0; 
+  text-align: left;
   margin-bottom: 40px;
 }
 
 .sidebar-header h1 {
   font-size: 1.8rem;
   margin-bottom: 2px;
-  font-weight: 600; 
+  font-weight: 600;
 }
 
 .sidebar-header p {
@@ -64,19 +62,19 @@ body {
   margin-bottom: 12px;
 }
 
-/* Profile Photo Styling - REDUCED TO 60px */
+/* Profile photo – only in sidebar */
 .profile-photo {
-  width: 60px; 
-  height: 60px; 
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  display: block; 
-  margin: 0 0 15px 0; /* Aligned left */
-  border: 2px solid var(--border); 
+  display: block;
+  margin: 0 0 15px 0;
+  border: 2px solid var(--border);
 }
 
 .contact a {
-  color: var(--muted); 
+  color: var(--muted);
   text-decoration: none;
   font-size: 0.9rem;
   display: block;
@@ -87,155 +85,18 @@ body {
   color: var(--accent);
 }
 
+/* Sidebar navigation */
 .sidebar-nav {
   margin-top: 24px;
   display: flex;
   flex-direction: column;
-  gap: 4px; 
+  gap: 4px;
 }
 
 .sidebar-nav a {
   font-size: 0.95rem;
   text-decoration: none;
-  color: var(--muted); 
-  padding: 8px 0; 
-  border-radius: 0;
-  transition: color 0.15s ease;
-}
-
-.sidebar-nav a:hover {
-  background: transparent;
-  color: var(--accent); 
-}
-
-/* Blocks / sections */
-.block {
-  margin-bottom: 50px; 
-  padding-bottom: 30px;
-  border-bottom: 1px solid var(--border);
-}
-
-.block:last-of-type {
-  border-bottom: none;
-  margin-bottom: 24px;
-}
-
-.block h2 {
-  font-size: 1.5rem;
-  margin-bottom: 20px; 
-  font-weight: 500;
-  border-bottom: 1px solid var(--border); 
-  padding-bottom: 5px;
-  display: inline-block; 
-}
-
-.block p {
-  margin-bottom: 16px; 
-  font-size: 1rem;
-}
-
-/* Project cards - Highly minimized */
-.project {
-  background: transparent; 
-  border-radius: 0;
-  border: none; 
-  padding: 15px 0; 
-  margin-bottom: 15px;
-  border-bottom: 1px dashed var(--border); 
-}
-
-.project:last-of-type {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-
-.project h3 {
-  font-size: 1.15rem;
-  margin-bottom: 4px;
-  font-weight: 500;
-}
-
-.project p {
-  margin-bottom: 10px;
-  font-size: 0.95rem;
   color: var(--muted);
-}
+  padding: 8px 0;
+  transition: color 0.15s ease
 
-.project-links {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  font-size: 0.9rem;
-  padding: 0;
-}
-
-.project-links a {
-  color: var(--accent);
-  text-decoration: none;
-  padding: 0; 
-  border-radius: 0;
-  background: transparent; 
-  font-weight: 500;
-  border-bottom: 1px solid var(--accent); 
-}
-
-.project-links a:hover {
-  background: transparent;
-  color: var(--accent);
-  opacity: 0.8;
-}
-
-/* Lists in other sections */
-.block ul {
-  padding-left: 20px;
-  font-size: 1rem;
-  list-style: disc;
-}
-
-.block li {
-  margin-bottom: 8px;
-}
-
-/* Quotes */
-blockquote {
-  margin-top: 15px;
-  padding-left: 14px;
-  border-left: 3px solid var(--border); 
-  font-style: italic;
-  color: var(--muted);
-}
-
-/* Footer */
-.footer {
-  margin-top: 30px;
-  font-size: 0.85rem;
-  color: var(--border); 
-}
-
-/* Responsive: ensure photo centers on small screens */
-@media (max-width: 800px) {
-  .sidebar {
-    position: static;
-    width: 100%;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 20px 15px;
-  }
-  
-  .sidebar-header {
-      text-align: center;
-      margin-bottom: 20px;
-  }
-  
-  /* Centering the photo for mobile view */
-  .profile-photo {
-      margin: 0 auto 10px auto; 
-  }
-
-  .content {
-    margin-left: 0;
-    padding: 30px 15px 40px;
-  }
-}
