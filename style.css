@@ -1,16 +1,17 @@
-/* style.css */
+/* style.css - Minimalist Design with smaller photo */
+
 :root {
-  --bg: #faf7f2;
-  --fg: #222222;
-  --accent: #c84132;
-  --accent-soft: #ffe3db;
-  --muted: #666666;
-  --border: #dddddd;
-  --sidebar-width: 260px;
-  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bg: #ffffff;             /* Pure white background for cleanliness */
+  --fg: #222222;             /* Dark text */
+  --accent: #007ACC;         /* Clean, professional blue accent */
+  --accent-soft: #f0f8ff;    /* Very light blue for subtle hovers */
+  --muted: #6a6a6a;          /* Softer gray for secondary text */
+  --border: #eeeeee;         /* Extremely light border color */
+  --sidebar-width: 280px;    /* Slightly wider sidebar for balance */
+  --font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Clean system font stack */
 }
 
-/* Reset */
+/* Reset and Body remain largely the same */
 * {
   margin: 0;
   padding: 0;
@@ -31,81 +32,86 @@ body {
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
-  padding: 24px 20px;
+  padding: 40px 30px; /* Increased padding */
   border-right: 1px solid var(--border);
-  background: #ffffff;
+  background: #fcfcfc; /* Very subtle off-white sidebar */
   overflow-y: auto;
 }
 
 .content {
   margin-left: var(--sidebar-width);
-  padding: 32px 24px 60px;
-  max-width: 900px;
+  padding: 50px 40px 60px; /* Increased padding for more whitespace */
+  max-width: 800px; /* Constrained width for better reading experience */
 }
 
 
 /* Sidebar */
 .sidebar-header {
-  text-align: center; /* Ensures the photo, name, and contact details are centered */
-  padding: 20px;
+  text-align: left; /* Aligned left for a more document-like/minimalist feel */
+  padding: 0; /* Removed extra padding */
+  margin-bottom: 40px;
 }
 
 .sidebar-header h1 {
-  font-size: 1.6rem;
-  margin-bottom: 4px;
+  font-size: 1.8rem;
+  margin-bottom: 2px;
+  font-weight: 600; /* Subtle emphasis */
 }
 
 .sidebar-header p {
   font-size: 0.9rem;
   color: var(--muted);
+  margin-bottom: 12px;
 }
 
-/* Profile Photo Styling */
+/* Profile Photo Styling - NOW SMALLER */
 .profile-photo {
-  width: 120px; 
-  height: 120px;
-  border-radius: 50%; /* Makes the image circular */
-  object-fit: cover; /* Ensures the image covers the area without distortion */
+  width: 70px; /* Reduced size */
+  height: 70px; /* Reduced size */
+  border-radius: 50%;
+  object-fit: cover;
   display: block; 
-  margin: 0 auto 15px auto; /* Centers the image horizontally and adds space below */
-  border: 3px solid #fff; /* Optional: adds a white border for contrast */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: subtle shadow */
+  margin: 0 0 15px 0; /* Adjusted bottom margin */
+  border: 2px solid var(--border); 
 }
 
 .contact a {
-  color: var(--accent);
+  color: var(--muted); /* Use muted color for contact links to reduce hierarchy */
   text-decoration: none;
+  font-size: 0.9rem;
+  display: block;
 }
 
 .contact a:hover {
   text-decoration: underline;
+  color: var(--accent);
 }
 
 .sidebar-nav {
   margin-top: 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px; /* Reduced gap */
 }
 
 .sidebar-nav a {
   font-size: 0.95rem;
   text-decoration: none;
-  color: var(--fg);
-  padding: 6px 10px;
-  border-radius: 6px;
-  transition: background 0.15s ease, color 0.15s ease;
+  color: var(--muted); /* Muted color for default links */
+  padding: 8px 0; /* Adjusted padding */
+  border-radius: 0;
+  transition: color 0.15s ease;
 }
 
 .sidebar-nav a:hover {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: transparent;
+  color: var(--accent); /* Highlight with the accent color */
 }
 
 /* Blocks / sections */
 .block {
-  margin-bottom: 40px;
-  padding-bottom: 24px;
+  margin-bottom: 50px; /* Increased bottom margin */
+  padding-bottom: 30px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -115,88 +121,96 @@ body {
 }
 
 .block h2 {
-  font-size: 1.4rem;
-  margin-bottom: 14px;
+  font-size: 1.5rem;
+  margin-bottom: 20px; /* Increased margin */
+  font-weight: 500;
+  border-bottom: 1px solid var(--border); /* Subtle line for heading separation */
+  padding-bottom: 5px;
+  display: inline-block; /* Keeps the border only under the text */
 }
 
 .block p {
-  margin-bottom: 12px;
-  font-size: 0.98rem;
+  margin-bottom: 16px; /* Increased margin */
+  font-size: 1rem;
 }
 
-/* Project cards */
+/* Project cards - Highly minimized */
 .project {
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  transition: box-shadow 0.2s ease;
+  background: transparent; /* Transparent background */
+  border-radius: 0;
+  border: none; /* No borders */
+  padding: 15px 0; /* Simplified padding */
+  margin-bottom: 15px;
+  border-bottom: 1px dashed var(--border); /* Subtle separator line */
 }
 
-.project:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.project:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .project h3 {
-  font-size: 1.1rem;
-  margin-bottom: 6px;
+  font-size: 1.15rem;
+  margin-bottom: 4px;
+  font-weight: 500;
 }
 
 .project p {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+  color: var(--muted);
 }
 
 .project-links {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 15px;
   font-size: 0.9rem;
-  padding: 0; /* Ensures list has no padding */
-}
-
-.project-links li {
-  margin-bottom: 0; /* Removes bottom margin from individual link items */
+  padding: 0;
 }
 
 .project-links a {
   color: var(--accent);
   text-decoration: none;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--accent-soft);
+  padding: 0; /* Removed padding */
+  border-radius: 0;
+  background: transparent; /* Removed background */
+  font-weight: 500;
+  border-bottom: 1px solid var(--accent); /* Subtle link styling */
 }
 
 .project-links a:hover {
-  background: var(--accent);
-  color: #ffffff;
+  background: transparent;
+  color: var(--accent);
+  opacity: 0.8;
 }
 
 /* Lists in other sections */
 .block ul {
-  padding-left: 18px;
-  font-size: 0.96rem;
+  padding-left: 20px;
+  font-size: 1rem;
+  list-style: disc;
 }
 
 .block li {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 /* Quotes */
 blockquote {
-  margin-top: 10px;
+  margin-top: 15px;
   padding-left: 14px;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--border); /* Lighter border color */
   font-style: italic;
   color: var(--muted);
 }
 
 /* Footer */
 .footer {
-  margin-top: 20px;
+  margin-top: 30px;
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--border); /* Very subtle footer */
 }
 
 /* Responsive: stack sidebar on small screens */
@@ -207,10 +221,20 @@ blockquote {
     height: auto;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    padding: 20px 15px;
+  }
+  
+  .sidebar-header {
+      text-align: center;
+      margin-bottom: 20px;
+  }
+  
+  .profile-photo {
+      margin: 0 auto 10px auto;
   }
 
   .content {
     margin-left: 0;
-    padding: 20px 14px 40px;
+    padding: 30px 15px 40px;
   }
 }
