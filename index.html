@@ -1,30 +1,28 @@
+---
+layout: default
+title: Charan Vijayan | A tech-efficient city enthusiast
+---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Charan Vijayan | A tech-efficient city enthusiast</title>
+  <title>{{ page.title }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/style.css"> 
 </head>
 <body>
-  <!-- Sidebar -->
-    <aside class="sidebar">
-  <div class="sidebar-header">
-    <img src="Profile photo.jpg" alt="Charan Vijayan Profile Photo" class="profile-photo">
-    
-    <h1>Charan Vijayan</h1>
-    <p>Urban Designer | Urban tech enthusiast </p>
-    <p class="contact">
-      <a href="mailto:charanvijayan27@outlook.com">charanvijayan27@outlook.com</a><br>
-      <a href="https://www.linkedin.com/in/charan-vijayan" target="_blank">LinkedIn</a>
-    </p>
-  </div>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <img src="Profile photo.jpg" alt="Charan Vijayan Profile Photo" class="profile-photo"> 
+      
+      <h1>Charan Vijayan</h1>
+      <p>Urban Designer | Urban tech enthusiast </p>
+      <p class="contact">
+        <a href="mailto:charanvijayan27@outlook.com">charanvijayan27@outlook.com</a><br>
+        <a href="https://www.linkedin.com/in/charan-vijayan" target="_blank">LinkedIn</a>
+      </p>
+    </div>
 
-  <nav class="sidebar-nav">
-    </nav>
-</aside>
-
-    
     <nav class="sidebar-nav">
       <a href="#data-projects">Data projects</a>
       <a href="#design-planning">Design / planning work</a>
@@ -34,10 +32,8 @@
     </nav>
   </aside>
 
-  <!-- Main content -->
   <main class="content">
 
-    <!-- Home / About section always visible at top -->
     <section id="home" class="block">
       <h2>About</h2>
       <p>
@@ -48,26 +44,20 @@
       </p>
     </section>
 
-    <!-- 1. Data projects -->
     <section id="data-projects" class="block">
       <h2>Data projects</h2>
 
-
+      <article class="project">
+        <h3>CMDA project – Urban data for Chennai</h3>
+        <p>
+          Evidence-based analysis for CMDA combining financial, operational and spatial datasets
+          to support planning and decision-making.
+        </p>
+        <ul class="project-links">
+          <li><a href="CMDA/index.html" target="_blank">Project overview</a></li>
+        </ul>
       </article>
-          <!-- CMDA project (summary card on main page) -->
-  <article class="project">
-  <h3>CMDA project – Urban data for Chennai</h3>
-  <p>
-    Evidence-based analysis for CMDA combining financial, operational and spatial datasets
-    to support planning and decision-making.
-  </p>
-  <ul class="project-links">
-     <li><a href="CMDA/index.html" target="_blank">Project overview</a></li>
-  
-     </ul>
-     </article>
 
-      <!-- Data Jam 1 – Air quality -->
       <article class="project">
         <h3>Bengaluru Air Quality Datajam – March 2025</h3>
         <p>Short description of the jam, data used, and outcome.</p>
@@ -77,7 +67,6 @@
         </ul>
       </article>
 
-      <!-- Data Jam 2 – Chennai water -->
       <article class="project">
         <h3>Design Jam on Chennai Water – April 2025</h3>
         <p>Short description.</p>
@@ -87,7 +76,6 @@
         </ul>
       </article>
 
-      <!-- BPP & IITH data analysis -->
       <article class="project">
         <h3>BPP &amp; IITH data analysis</h3>
         <p>Short description.</p>
@@ -98,7 +86,6 @@
       </article>
     </section>
 
-    <!-- 2. Design / planning work -->
     <section id="design-planning" class="block">
       <h2>Design / planning work</h2>
 
@@ -118,9 +105,6 @@
       </article>
     </section>
 
-
-
-    <!-- 3. Interdiscipline -->
     <section id="interdiscipline" class="block">
       <h2>Interdiscipline</h2>
 
@@ -141,7 +125,6 @@
       </article>
     </section>
 
-    <!-- 4. Summer schools -->
     <section id="summer-schools" class="block">
       <h2>Summer schools & fun stuff</h2>
       <ul>
@@ -150,7 +133,6 @@
       </ul>
     </section>
 
-    <!-- 5. Favourite quotes (refreshable manually) -->
     <section id="quotes" class="block">
       <h2>My favourite quotes</h2>
       <p>
@@ -163,9 +145,8 @@
     </section>
 
     <footer class="footer">
-      <p>&copy; 2025 Your Name</p>
+      <p>&copy; 2025 Charan Vijayan</p>
     </footer>
   </main>
 </body>
 </html>
-
