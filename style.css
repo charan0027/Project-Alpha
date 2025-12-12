@@ -195,8 +195,9 @@ blockquote {
   }
 
   .content {
-    margin-left: 0;
-    padding: 24px 16px 40px;
-    max-width: 100%;
-  }
+  margin-left: 260px;      /* same as --sidebar-width */
+  padding: 40px 40px 60px; /* top, right, bottom; left padding 40 */
+  max-width: 760px;
+ }
+
 }
