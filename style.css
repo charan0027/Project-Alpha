@@ -42,6 +42,7 @@ body {
   max-width: 900px;
 }
 
+
 /* Sidebar */
 .sidebar-header h1 {
   font-size: 1.6rem;
@@ -51,6 +52,24 @@ body {
 .sidebar-header p {
   font-size: 0.9rem;
   color: var(--muted);
+}
+
+/* Add this to your style.css file */
+
+.profile-photo {
+    width: 120px; /* Adjust size as needed */
+    height: 120px;
+    border-radius: 50%; /* Makes the image circular */
+    object-fit: cover; /* Ensures the image covers the area without distortion */
+    display: block; /* Helps with positioning/margins */
+    margin-bottom: 15px; /* Adds space below the photo */
+    border: 3px solid #fff; /* Optional: adds a white border for contrast */
+}
+
+/* You might also want to adjust the sidebar-header text alignment */
+.sidebar-header {
+    text-align: center;
+    padding: 20px;
 }
 
 .contact a {
