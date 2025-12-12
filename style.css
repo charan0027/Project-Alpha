@@ -1,3 +1,4 @@
+/* style.css */
 :root {
   --bg: #faf7f2;
   --fg: #222222;
@@ -44,6 +45,11 @@ body {
 
 
 /* Sidebar */
+.sidebar-header {
+  text-align: center; /* Ensures the photo, name, and contact details are centered */
+  padding: 20px;
+}
+
 .sidebar-header h1 {
   font-size: 1.6rem;
   margin-bottom: 4px;
@@ -54,22 +60,16 @@ body {
   color: var(--muted);
 }
 
-/* Add this to your style.css file */
-
+/* Profile Photo Styling */
 .profile-photo {
-    width: 120px; /* Adjust size as needed */
-    height: 120px;
-    border-radius: 50%; /* Makes the image circular */
-    object-fit: cover; /* Ensures the image covers the area without distortion */
-    display: block; /* Helps with positioning/margins */
-    margin-bottom: 15px; /* Adds space below the photo */
-    border: 3px solid #fff; /* Optional: adds a white border for contrast */
-}
-
-/* You might also want to adjust the sidebar-header text alignment */
-.sidebar-header {
-    text-align: center;
-    padding: 20px;
+  width: 120px; 
+  height: 120px;
+  border-radius: 50%; /* Makes the image circular */
+  object-fit: cover; /* Ensures the image covers the area without distortion */
+  display: block; 
+  margin: 0 auto 15px auto; /* Centers the image horizontally and adds space below */
+  border: 3px solid #fff; /* Optional: adds a white border for contrast */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: subtle shadow */
 }
 
 .contact a {
@@ -131,6 +131,11 @@ body {
   border: 1px solid var(--border);
   padding: 14px 16px;
   margin-bottom: 12px;
+  transition: box-shadow 0.2s ease;
+}
+
+.project:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .project h3 {
@@ -148,6 +153,11 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   font-size: 0.9rem;
+  padding: 0; /* Ensures list has no padding */
+}
+
+.project-links li {
+  margin-bottom: 0; /* Removes bottom margin from individual link items */
 }
 
 .project-links a {
