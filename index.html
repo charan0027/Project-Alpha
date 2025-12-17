@@ -1,141 +1,199 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Effect of Air Quality on Metro Rail Ridership, Bengaluru</title>
+  <title>Charan Vijayan | A tech-efficient city enthusiast</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css">
-  <style>
-    /* Local tweaks for Datajam page */
-    .slides-gallery {
+  <!-- IMPORTANT: relative path, NOT starting with / -->
+  <link rel="stylesheet" href="style.css">
+
+<style>
+    /* Small tweaks specific to this page */
+    .hero-image {
+      width: 100%;
+      max-width: 900px;
+      height: 260px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin: 0 auto 16px auto;
+      display: block;
+    }
+
+    .thumb-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
-      margin-top: 14px;
+      margin-top: 10px;
     }
-    .slide-card {
+
+    .thumb-card {
       border: 1px solid var(--border);
       border-radius: 8px;
       background: #fff;
-      overflow: hidden;
+      padding: 8px;
       font-size: 0.9rem;
     }
-    .slide-card img {
+
+    .thumb-card img {
       width: 100%;
-      height: 180px;          /* controls apparent size */
-      object-fit: cover;      /* keeps landscape crop */
+      height: 180px;        /* landscape thumbnails */
+      object-fit: cover;    /* crop nicely */
+      border-radius: 6px;
+      margin-bottom: 6px;
       display: block;
     }
-    .slide-card-text {
-      padding: 8px 10px 10px;
-      color: var(--muted);
-    }
+
     .back-link {
       font-size: 0.9rem;
       margin-bottom: 16px;
       display: inline-block;
     }
-  </style>
+</style>
+
+   
 </head>
 <body>
+ 
+  <!-- Left sidebar with photo and navigation -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <img src="Profile photo.jpg" alt="Charan Vijayan Profile Photo" class="profile-photo">
+
+      <h1>Charan Vijayan</h1>
+      <p>Urban Designer | Urban tech enthusiast</p>
+      <p class="contact">
+        <a href="mailto:charanvijayan27@outlook.com">charanvijayan27@outlook.com</a><br>
+        <a href="https://www.linkedin.com/in/charan-vijayan" target="_blank">LinkedIn</a>
+      </p>
+    </div>
+
+
+
+
+    <nav class="sidebar-nav">
+      <a href="#data-projects">Data projects</a>
+      <a href="#design-planning">Design / planning work</a>
+      <a href="#interdiscipline">Interdiscipline</a>
+      <a href="#summer-schools">Summer schools</a>
+      <a href="#quotes">My favourite quotes</a>
+    </nav>
+  </aside>
+
+  <!-- Main content (no photo here) -->
   <main class="content">
 
-    <a href="../index.html#data-projects" class="back-link">&larr; Back to portfolio</a>
-
-    <!-- Header -->
-    <section class="block">
-      <h2>Effect of Air Quality on Metro Rail Ridership</h2>
+    <section id="home" class="block">
+      <h2>Welcome to my Portfolio!</h2>
       <p>
-        This DataJam project examines how daily air quality conditions influence metro rail ridership in an Indian city,
-        using ridership and air quality data to uncover behavioral responses to pollution events.
+      This GitHub repository showcases my professional experience and data-driven projects completed post-graduation.
       </p>
+      
+       <h2>About Me</h2>
+        </p>
+I am an urbanist driven by a simple question, 'Why can’t we use technology to solve the daily challenges of city living?' I view cities as vibrant economic hubs, yet they face complex hurdles in infrastructure, mobility, and security.
+       </p>
+       </p>
+My mission is to leverage Artificial Intelligence and emerging technologies to solve urban problems. With a background in Urban Design and Planning, I apply systems thinking and policy-making to create sustainable, inclusive, and futuristic urban spaces.
+I am actively seeking opportunities to apply my expertise in AI-driven urban interventions to improve citizen life and rejuvenate our cities.
+      </p>
+     
+    </section>
+
+    <section id="data-projects" class="block">
+      <h2>Data projects</h2>
+
+      <article class="project">
+        <h3>CMDA project – Urban data for Chennai</h3>
+        <p>
+          Evidence-based analysis for CMDA combining financial, operational and spatial datasets
+          to support planning and decision-making.
+        </p>
+        <ul class="project-links">
+          <li><a href="CMDA/index.html" target="_blank">Project Overview</a></li>
+        </ul>
+      </article>
+
+      <article class="project">
+        <h3>Bengaluru Air Quality Datajam – March 2025</h3>
+        <p>Short description of the jam, data used, and outcome.</p>
+        <ul class="project-links">
+          <li><a href="https://opencity.in/bengaluru-air-quality-datajam-march-2025/" target="_blank">DataJam Overview</a></li>
+          <li><a href="Datajam/index.html" target="_blank">Project Overview</a></li>
+        </ul>
+      </article>
+
+      <article class="project">
+        <h3>Design Jam on Chennai Water – April 2025</h3>
+        <p>Short description.</p>
+        <ul class="project-links">
+          <li><a href="https://opencity.in/design-jam-on-chennai-water-april-2025/" target="_blank">Overview</a></li>
+          <li><a href="#" target="_blank">GitHub repo</a></li>
+        </ul>
+      </article>
+
+      <article class="project">
+        <h3>BPP &amp; IITH data analysis</h3>
+        <p>Short description.</p>
+        <ul class="project-links">
+          <li><a href="#" target="_blank">Report</a></li>
+          <li><a href="#" target="_blank">GitHub repo</a></li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="design-planning" class="block">
+      <h2>Design / planning work</h2>
+
+      <article class="project">
+        <h3>Studio portfolio</h3>
+        <ul>
+            <li><strong>Urban Design Portfolio</strong> – description + link:
+            <a href="Portfolio_Charan.pdf" target="_blank">View work</a>
+          </li>
+           <li><strong>CEPT Online Portfolio</strong> – brief line about the studio and link:
+            <a href="https://portfolio.cept.ac.in/student/charan-v-ug180124" target="_blank">View work</a>
+          </li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="interdiscipline" class="block">
+      <h2>Interdiscipline</h2>
+
+      <article class="project">
+        <h3>Work 1</h3>
+        <p>Short description; link to GitHub / slides / paper.</p>
+        <ul class="project-links">
+          <li><a href="#" target="_blank">Details</a></li>
+        </ul>
+      </article>
+
+      <article class="project">
+        <h3>Work 2</h3>
+        <p>Short description.</p>
+        <ul class="project-links">
+          <li><a href="#" target="_blank">Details</a></li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="summer-schools" class="block">
+      <h2>Summer schools &amp; fun stuff</h2>
+      <ul>
+        <li><strong>School / program name</strong> – one‑line what you did, link if available.</li>
+        <li><strong>Another activity</strong> – description and link.</li>
+      </ul>
+    </section>
+
+    <section id="quotes" class="block">
+      <h2>My favourite quotes</h2>
       <p>
-        The work combines ridership logs with AQI and pollutant metrics to quantify the strength of this relationship,
-        identify thresholds where behavior changes, and outline implications for transport planning and policy.
+        You can paste one quote here and periodically change it in the code,
+        or later add a small script to rotate quotes.
       </p>
-    </section>
-
-    <!-- Objective -->
-    <section class="block">
-      <h3>Objective</h3>
-      <p>
-        To measure the impact of air quality on metro usage by:
-      </p>
-      <ul>
-        <li>Estimating how changes in AQI relate to changes in daily ridership.</li>
-        <li>Detecting pollution thresholds where ridership drops more sharply.</li>
-        <li>Interpreting what these patterns mean for commuters and metro operators.</li>
-      </ul>
-    </section>
-
-    <!-- Data & Approach (brief) -->
-    <section class="block">
-      <h3>Data &amp; Approach</h3>
-      <ul>
-        <li>Daily metro ridership data, aggregated at system or line level.</li>
-        <li>Daily air quality indicators (AQI and key pollutants) from official monitoring sources.</li>
-        <li>Exploratory plots, correlations and simple models to relate AQI levels to ridership changes over time.</li>
-      </ul>
-    </section>
-
-    <!-- Key Results -->
-    <section class="block">
-      <h3>Key Results</h3>
-      <ul>
-        <li>Ridership tends to fall on days with poorer air quality, indicating a negative relationship between AQI and metro use.</li>
-        <li>Behavioral changes are more visible once AQI crosses into higher pollution categories, suggesting threshold effects.</li>
-        <li>Some of the response appears with a lag of about one–two days, hinting at delayed awareness and adjustment by commuters.</li>
-      </ul>
-    </section>
-
-    <!-- Slides (last 4) -->
-    <section class="block">
-      <h3>Selected slides</h3>
-      <p>
-        The last four slides summarise the analysis, results and implications.
-      </p>
-
-      <div class="slides-gallery">
-        <div class="slide-card">
-          <img src="slide-01.jpg" alt="Slide 1 – Data and setup">
-          <p class="slide-card-text">Data sources and how ridership and air quality were combined.</p>
-        </div>
-
-        <div class="slide-card">
-          <img src="slide-02.jpg" alt="Slide 2 – Patterns and correlation">
-          <p class="slide-card-text">Trend and correlation plots showing how ridership moves with AQI.</p>
-        </div>
-
-        <div class="slide-card">
-          <img src="slide-03.jpg" alt="Slide 3 – Key findings">
-          <p class="slide-card-text">Main quantitative findings and threshold effects.</p>
-        </div>
-
-        <div class="slide-card">
-          <img src="slide-04.jpg" alt="Slide 4 – Takeaways and next steps">
-          <p class="slide-card-text">Policy takeaways and ideas for extending the work to other cities.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Takeaways -->
-    <section class="block">
-      <h3>Takeaways</h3>
-      <ul>
-        <li>Air quality is not just a health metric; it also shapes how and when people use public transport.</li>
-        <li>Metro operators can anticipate demand dips around high-pollution days and plan services and communication accordingly.</li>
-        <li>The same framework can be reused for other cities or modes (bus, suburban rail) as more data becomes available.</li>
-      </ul>
-    </section>
-
-    <!-- Links -->
-    <section class="block">
-      <h3>Links &amp; files</h3>
-      <ul>
-        <li><a href="Charan_Effect-of-Air-Quality-on-Metro-Rail-Ridership-1.pdf" target="_blank">Project report (PDF)</a></li>
-        <li><a href="analysis-notebook.html" target="_blank">Interactive analysis notebook (HTML)</a></li>
-        <li><a href="https://github.com/charan0027/Project-Alpha" target="_blank">Code / repository</a></li>
-      </ul>
+      <blockquote>
+        “Your favourite quote goes here.”
+      </blockquote>
     </section>
 
     <footer class="footer">
@@ -144,4 +202,3 @@
   </main>
 </body>
 </html>
-
