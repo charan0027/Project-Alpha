@@ -4,8 +4,38 @@
   <meta charset="UTF-8">
   <title>Effect of Air Quality on Metro Rail Ridership, Bengaluru</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- assumes style.css is in repo root -->
   <link rel="stylesheet" href="../style.css">
+  <style>
+    /* Local tweaks for Datajam page */
+    .slides-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+    }
+    .slide-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+    .slide-card img {
+      width: 100%;
+      height: 180px;          /* controls apparent size */
+      object-fit: cover;      /* keeps landscape crop */
+      display: block;
+    }
+    .slide-card-text {
+      padding: 8px 10px 10px;
+      color: var(--muted);
+    }
+    .back-link {
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+  </style>
 </head>
 <body>
   <main class="content">
@@ -62,7 +92,7 @@
     <section class="block">
       <h3>Selected slides</h3>
       <p>
-        The last four slides summarise the analysis, results and implications. Click to view larger if you link them to full-size images.
+        The last four slides summarise the analysis, results and implications.
       </p>
 
       <div class="slides-gallery">
@@ -114,4 +144,3 @@
   </main>
 </body>
 </html>
-
