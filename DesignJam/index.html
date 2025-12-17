@@ -1,1 +1,320 @@
-print(hello world)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Design Jam: Water Security in Chennai</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    /* Design Jam page tweaks */
+    .slides-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+    }
+    .slide-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+    .slide-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+    .slide-card-text {
+      padding: 8px 10px 10px;
+      color: var(--muted);
+    }
+    .back-link {
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+    .highlight-box {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+    }
+    .takeaways {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .takeaway-card {
+      background: #f9f9f9;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 0.9rem;
+    }
+    .takeaway-card strong {
+      color: var(--accent);
+      display: block;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <main class="content">
+
+    <a href="../index.html#data-projects" class="back-link">&larr; Back to portfolio</a>
+
+    <!-- Header -->
+    <section class="block">
+      <h2>Design Jam: Water Security in Urban Areas</h2>
+      <div style="font-size: 0.95rem; color: var(--muted); margin-bottom: 12px;">
+        <strong>Event:</strong> OpenCity Design Jam | <strong>Focus:</strong> Urban water systems and resilience
+      </div>
+      <p>
+        A collaborative design and data-driven exploration into water security challenges in urban metros,
+        focusing on how spatial patterns, infrastructure gaps, and behavioral factors shape access and resilience.
+      </p>
+      <p>
+        This jam brought together urban designers, data analysts, and domain experts to identify bottlenecks,
+        prototype solutions, and recommend actionable interventions for city governments.
+      </p>
+    </section>
+
+    <!-- Problem Statement (Slide 2) -->
+    <section class="block">
+      <h2>Problem Statement</h2>
+      <p>
+        Urban water insecurity manifests across multiple dimensions:
+      </p>
+      <ul>
+        <li><strong>Access Inequality:</strong> Unequal distribution of water supply across neighborhoods, with slums and periphery areas underserved.</li>
+        <li><strong>Infrastructure Gaps:</strong> Aging pipes, leakage, and poor maintenance lead to significant water loss before delivery.</li>
+        <li><strong>Seasonal Volatility:</strong> Monsoons cause flooding in low-lying areas; summers bring acute scarcity in upper-income zones.</li>
+        <li><strong>Groundwater Depletion:</strong> Over-extraction strains aquifers, threatening long-term urban sustainability.</li>
+        <li><strong>Data Silos:</strong> Water utilities, municipal bodies, and citizen networks operate without integrated data visibility.</li>
+      </ul>
+      <div class="highlight-box">
+        <strong>Central Question:</strong> How can data-driven design interventions improve equitable, resilient water access in dense urban areas?
+      </div>
+    </section>
+
+    <!-- Design Goals -->
+    <section class="block">
+      <h3>Design Goals</h3>
+      <ul>
+        <li>Map spatial water security vulnerability across income and geographic categories.</li>
+        <li>Identify high-impact intervention points (infrastructure, policy, behavioral).</li>
+        <li>Co-design citizen-facing tools and information systems.</li>
+        <li>Build replicable frameworks for other Indian cities.</li>
+      </ul>
+    </section>
+
+    <!-- Methodology (Slide 7-10 equiv) -->
+    <section class="block">
+      <h3>Methodology</h3>
+      <p>
+        <strong>Phase 1: Rapid Data Collection</strong>
+      </p>
+      <ul>
+        <li>Interviewed water utility staff, municipal engineers, and community leaders.</li>
+        <li>Analyzed utility water supply records, distribution maps, and maintenance logs.</li>
+        <li>Collected spatial data: slum locations, income zones, topography, infrastructure density.</li>
+      </ul>
+      <p>
+        <strong>Phase 2: Analysis &amp; Mapping</strong>
+      </p>
+      <ul>
+        <li>Layered water access, income, and infrastructure data to identify vulnerability clusters.</li>
+        <li>Modeled leakage and supply distribution patterns.</li>
+        <li>Conducted citizen surveys to understand perceptions, coping strategies, and willingness-to-pay.</li>
+      </ul>
+      <p>
+        <strong>Phase 3: Design &amp; Prototyping</strong>
+      </p>
+      <ul>
+        <li>Co-designed dashboard for utilities and community groups.</li>
+        <li>Sketched interventions: rainwater harvesting nodes, leak detection systems, awareness campaigns.</li>
+        <li>Prototyped a mobile app for citizen reporting and demand forecasting.</li>
+      </ul>
+    </section>
+
+    <!-- Key Findings (Slide 11-13 equiv) -->
+    <section class="block">
+      <h2>Key Findings</h2>
+      <p>
+        <strong>1. Spatial Disparity:</strong> Peripheral low-income zones receive 40% less piped water per capita than central upper-income areas,
+        despite equal demand.
+      </p>
+      <p>
+        <strong>2. Leakage Hotspots:</strong> Aging distribution networks lose 35–45% of treated water before reaching consumers;
+        zones with poorest maintenance show highest loss.
+      </p>
+      <p>
+        <strong>3. Informal Coping:</strong> Citizens in under-served areas rely on tankers (unreliable, expensive) and bore wells (unsustainable);
+        poorer households spend 8–12% of income on water vs. 2–3% in served areas.
+      </p>
+      <div class="highlight-box">
+        <strong>Key Insight:</strong> Water insecurity is not purely a resource scarcity issue but a distribution, maintenance, and governance problem.
+        Well-targeted interventions can unlock significant improvements without major new infrastructure.
+      </div>
+    </section>
+
+    <!-- Recommended Interventions (Slide 14-16 equiv) -->
+    <section class="block">
+      <h2>Recommended Interventions</h2>
+      <p>
+        <strong>Tier 1 – Quick Wins (6–12 months):</strong>
+      </p>
+      <ul>
+        <li><strong>Leak Detection &amp; Repair Program:</strong> Deploy acoustic sensors, fix priority leaks, target 15–20% reduction in system loss.</li>
+        <li><strong>Citizen Feedback Portal:</strong> Mobile app for reporting water quality, pressure, and service issues; real-time visibility for utilities.</li>
+        <li><strong>Equitable Tariff &amp; Subsidy Redesign:</strong> Means-tested pricing that incentivizes conservation while protecting low-income access.</li>
+      </ul>
+      <p>
+        <strong>Tier 2 – Medium-Term (1–3 years):</strong>
+      </p>
+      <ul>
+        <li><strong>Decentralized Water Systems:</strong> Rainwater harvesting nodes, treated greywater recycling in buildings, strategic bore well licensing.</li>
+        <li><strong>Community Water Committees:</strong> Train neighborhood groups to monitor supply, report issues, co-manage maintenance.</li>
+        <li><strong>Integrated Data Platform:</strong> Link utility, weather, health, and citizen data to forecast demand and optimize distribution.</li>
+      </ul>
+      <p>
+        <strong>Tier 3 – Long-Term (3+ years):</strong>
+      </p>
+      <ul>
+        <li><strong>Infrastructure Upgrade:</strong> Systematic pipe replacement in high-loss zones; upgrade treatment capacity.</li>
+        <li><strong>Watershed &amp; Aquifer Management:</strong> Coordinate city and peri-urban water sources; set sustainable extraction limits.</li>
+      </ul>
+    </section>
+
+    <!-- Presentation Slides (Slides 2, 7-16 equiv) -->
+    <section class="block">
+      <h2>Presentation Slides</h2>
+      <p>
+        Selected slides showing problem, methodology, findings, and recommendations.
+      </p>
+
+      <div class="slides-gallery">
+        <div class="slide-card">
+          <img src="slide-10.jpg" alt="Slide 2 – Problem Statement">
+          <p class="slide-card-text">Problem statement &amp; water security dimensions.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-01.jpg" alt="Slide 7 – Methodology Phase 1">
+          <p class="slide-card-text">Data collection &amp; community engagement.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-02.jpg" alt="Slide 8 – Methodology Phase 2">
+          <p class="slide-card-text">Mapping vulnerability &amp; analysis.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-03.jpg" alt="Slide 9 – Methodology Phase 3">
+          <p class="slide-card-text">Design workshops &amp; prototyping.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-04.jpg" alt="Slide 11 – Spatial Disparity">
+          <p class="slide-card-text">Water access inequality across zones.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-05.jpg" alt="Slide 12 – Leakage Analysis">
+          <p class="slide-card-text">System water loss &amp; hotspots.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-06.jpg" alt="Slide 13 – Citizen Coping">
+          <p class="slide-card-text">Informal strategies &amp; economic burden.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-07.jpg" alt="Slide 14 – Tier 1 Interventions">
+          <p class="slide-card-text">Quick wins &amp; low-hanging fruit.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-08.jpg" alt="Slide 15 – Tier 2 Interventions">
+          <p class="slide-card-text">Medium-term systemic improvements.</p>
+        </div>
+
+        <div class="slide-card">
+          <img src="slide-09.jpg" alt="Slide 16 – Long-Term Roadmap">
+          <p class="slide-card-text">Infrastructure &amp; governance transformation.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Impact &amp; Takeaways -->
+    <section class="block">
+      <h2>Impact &amp; Takeaways</h2>
+      <div class="takeaways">
+        <div class="takeaway-card">
+          <strong>Data-Driven Equity</strong>
+          <p>Spatial visualization of water inequality makes invisible disparities visible to policymakers and enables targeted action.</p>
+        </div>
+
+        <div class="takeaway-card">
+          <strong>Maintenance as Infrastructure</strong>
+          <p>Fixing leaks and optimizing existing systems can deliver 30–40% benefit gains without major capex.</p>
+        </div>
+
+        <div class="takeaway-card">
+          <strong>Citizen Engagement</strong>
+          <p>Mobile tools and community committees transform citizens from passive consumers to active co-managers of water security.</p>
+        </div>
+
+        <div class="takeaway-card">
+          <strong>Decentralization</strong>
+          <p>Rainwater harvesting, greywater recycling, and bore well optimization reduce stress on centralized systems and build resilience.</p>
+        </div>
+
+        <div class="takeaway-card">
+          <strong>Replicability</strong>
+          <p>Methodology and toolkit apply to other Indian cities; data formats and design patterns are transferable.</p>
+        </div>
+
+        <div class="takeaway-card">
+          <strong>Urgency + Actionability</strong>
+          <p>Phased roadmap (quick wins, medium-term, long-term) balances immediate relief with systemic transformation.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Deliverables -->
+    <section class="block">
+      <h3>Deliverables &amp; Links</h3>
+      <ul>
+        <li><a href="Design-Jam-Water-Security-Report.pdf" target="_blank">Full Design Jam Report (PDF)</a></li>
+        <li><a href="water-vulnerability-maps.html" target="_blank">Interactive Vulnerability Maps &amp; Data Dashboard</a></li>
+        <li><a href="citizen-app-prototype.html" target="_blank">Citizen Feedback App Prototype</a></li>
+        <li><a href="https://github.com/charan0027/design-jam-water" target="_blank">Code, data &amp; design files (GitHub)</a></li>
+      </ul>
+    </section>
+
+    <!-- Next Steps -->
+    <section class="block">
+      <h3>Next Steps &amp; Collaboration</h3>
+      <p>
+        This Design Jam is a foundation for deeper engagement. Next phases include:
+      </p>
+      <ul>
+        <li>Pilot leak detection in one high-loss zone (partnership with municipal water utility).</li>
+        <li>Launch citizen app beta in 2–3 neighborhoods for real-world feedback.</li>
+        <li>Expand analysis to cover peri-urban and rural water sources feeding the city.</li>
+        <li>Document learnings for replication in 2–3 other Indian metros (Bengaluru, Hyderabad, Kolkata).</li>
+      </ul>
+    </section>
+
+    <footer class="footer">
+      <p>&copy; 2025 Charan Vijayan | Design Jam: Water Security in Urban Areas</p>
+    </footer>
+  </main>
+</body>
+</html>
+
