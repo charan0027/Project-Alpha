@@ -6,6 +6,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- IMPORTANT: relative path, NOT starting with / -->
   <link rel="stylesheet" href="style.css">
+
+<style>
+    /* Small tweaks specific to this page */
+    .hero-image {
+      width: 100%;
+      max-width: 900px;
+      height: 260px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin: 0 auto 16px auto;
+      display: block;
+    }
+
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .thumb-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+
+    .thumb-card img {
+      width: 100%;
+      height: 180px;        /* landscape thumbnails */
+      object-fit: cover;    /* crop nicely */
+      border-radius: 6px;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .back-link {
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+</style>
+
+   
 </head>
 <body>
  
